@@ -14,6 +14,8 @@ def get_actionset(env):
         for f in env.flight:
             if calc_object_dist(b, f) <= b.radius and b.radar_capa > 0 and b.reload == 0:
                 # 사정거리 안에 있음 + radar 용량 있음 + 재장전시간 조건 만족
+                # 먼 미래에 수정! 사정거리 안에 있다가 밖으로 나가도 격추 가능 가정.
+                # 먼 미래에 수정! 사정거리 안으로 들어올 것을 미리 예상해서 쏘는 것 불가능 가정.
                 action_set.append((b, f))
     return action_set
 

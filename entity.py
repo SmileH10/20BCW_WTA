@@ -13,7 +13,7 @@ class Flight(object):
         self.id = id
         self.x = init_x  # x 좌표
         self.y = init_y  # y 좌표
-        self.v = 1  # 속도. 아직 쓰는 곳 없음. kill prob 계산 때 쓸 듯?
+        self.v = 0.272  # 속도. 아직 쓰는 곳 없음. kill prob 계산 때 쓸 듯?
         self.direction = 0  # 진행 방향 (세 방향 중 하나. 60도, 0도, -60도)
         self.target_asset = target_asset  # 목표 자산 객체 넣기. route 계산할 때 쓸 듯. 목표 자산을 향하도록 routing.
         self.surv_prob = 1.0  # 초기 생존확률 = 1
@@ -46,9 +46,9 @@ class Battery(object):
         self.id = id
         self.x = x  # 포대 x좌표
         self.y = y  # 포대 y좌표
-        self.v = 10  # 미사일 속도 (kill prob 등 계산 편하게 하려고 여기서 씀. 같은 포대에서 발사된 미사일 속도 동일 가정)
+        self.v = 0.816  # 미사일 속도 (kill prob 등 계산 편하게 하려고 여기서 씀. 같은 포대에서 발사된 미사일 속도 동일 가정)
         self.radar_capa = 2  # 레이더 용량. 동시 조준 가능한 미사일 개수
-        self.radius = 30  # 사정거리
+        self.radius = 40  # 사정거리
         self.reload = 0  # 남은 재장전 시간 = 발사가능시간까지 남은 시간
         self.total_launching = 0  # 지금까지 발사한 총 미사일 수. 미사일 id 만들 때 씀.
 

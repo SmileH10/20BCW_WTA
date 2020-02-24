@@ -17,7 +17,7 @@ class Env(object):
 
     def run_simulation(self):
         while not self.check_termination():
-            # 포대 별로 action 정하게끔 하기.
+            # 포대 별로 action 정하게끔 하기. self.state_transition에서 action 직후(시간경과x) 변환과 시간경과 이동을 분리하기.
             best_action = self.agent.select_action(self)  # 1) 현재 state에서 가장 좋은 action 선택하기
             self.state_transition(best_action)  # 2) 1)에서 선택한 action을 수행해서 next_state로 이동하기
             if self.agent.name == 'rl':  # 3) Q 함수의 가중치 업데이트하기
