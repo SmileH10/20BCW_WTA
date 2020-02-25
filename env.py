@@ -48,9 +48,9 @@ class Env(object):
         for b in self.battery:
             b.transit_reload()
         for m in self.missile:
-            m.transit_route()  # 만들어야 함
-            m.transit_expc_arrt()
-            m.transit_kill_prob()
+            m.update_info()  # kill_prob, expc_arrt, v 다시 계산
+            m.transit_route()
+
         # 미사일 격추 확인
         m_exploding = [m for m in self.missile if m.expc_arrt <= 0]
         for m in m_exploding:
