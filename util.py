@@ -3,8 +3,9 @@ import math
 
 def calc_object_dist(object1, object2):
     """
-    :param object1, object2: 거리 측정할 두 객체
-    :return: 두 객체 사이의 직선거리
+    :type object1: class
+    :type object2: class
+    :return: 두 객체 사이 거리 반환
     """
     return math.sqrt((object1.x - object2.x) ** 2 + (object1.y - object2.y) ** 2)
 
@@ -39,15 +40,23 @@ def calc_kill_prob_dist(dist):
 
 
 def calc_kill_prob_angle(theta):
-    # 각도에 따른 파괴 확률.
-    # 조건 3개 만족해야: alpha & beta >= 0; -1 * alpha + beta >= 0; alpha + beta <=1
+    """
+    :param theta: 충돌 각도
+    :return: 각도에 따른 파괴 확률
+    조건 3개 만족해야 함: (1) alpha & beta >= 0; (2) -1 * alpha + beta >= 0; (3) alpha + beta <=1
+    """
     alpha = 0.5
     beta = 0.5
     return -1 * alpha * math.cos(theta) + beta
 
 
 def rotate(theta, vector):
-    # theta 만큼 반시계방향 회전
+    """
+    :param theta: 반시계방향으로 회전시킬 각도
+    :param vector: 회전시킬 2D vector
+    :type vector: list
+    :return: 회전된 2D vector 리스트
+    """
     rotated_vector_x = math.cos(theta) * vector[0] - math.sin(theta) * vector[1]
     rotated_vector_y = math.sin(theta) * vector[0] + math.cos(theta) * vector[1]
     return [rotated_vector_x, rotated_vector_y]

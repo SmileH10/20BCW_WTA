@@ -10,39 +10,32 @@ class Asset(object):
 
 
 class Flight(object):
-    def __init__(self, id, init_x, init_y, target_asset):
-        self.id = id
+    def __init__(self, f_id, init_x, init_y, target_asset, start_t=0):
+        self.id = f_id
         self.x = init_x  # x 좌표
         self.y = init_y  # y 좌표
+        self.start_t = start_t  # 출발 시점
         self.v = 0.272  # 속력. kill prob 계산 때 사용
-        self.v_x = 0  # x축 속도
-        self.v_y = -0.272  # y축 속도
+        self.v_x = 0  # x축 초기 속도
+        self.v_y = -0.272  # y축 초기 속도
         self.direction = -0.5 * math.pi  # 진행 방향 (초기: -90도)
         self.target_asset = target_asset  # 목표 자산 객체 넣기. route 계산할 때 쓸 듯. 목표 자산을 향하도록 routing.
         self.surv_prob = 1.0  # 초기 생존확률 = 1
         self.change_direction_check = False  # 직전 시점에서 방향을 바꿨는지 기록: 미사일의 info를 새로 update 할 지 말 지 고를 때 사용.
 
-    def transit_route(self):
-        """
-        공격 알고리즘(전투기의 공격 패턴)에 따라 수정해야 하는 블록.
-        방어 알고리즘이 여기서 작성된 routing 확률분포를 학습함.
-        # 각 전투기의 출발시간도 여기서 조절함
-        """
-        """
-        Step 1) 진행 방향 정하기 (가던 방향? 방향 전환?)
-        Step 2) 1 시점이 지났을 때의 x좌표, y좌표 update 하기
-                예시) self.x += cosine(direction) * 1
-        """
-        self.x += self.v_x
-        self.y += self.v_y
-        # self.v_x, v_y 수정 . rotate 함수 이용
-        rotate_theta = 0  # 범위 제한
-        if rotate_theta != 0:
-            [self.v_x, self.v_y] = util.rotate(rotate_theta, [self.v_x, self.v_y])
-            self.direction += rotate_theta
-            self.change_direction_check = True
-        else:
-            self.change_direction_check = False
+    def transit_route(self, env):
+        if env.sim_t < self.start_t:  # 전투기 출발시간이 아직 안됐으면
+            return  # 움직이지 않음
+        else: # 출발시간이 지났으면 움직임 반영하기.
+            self.x += self.v_x
+            self.y += self.v_y
+            rotate_theta = 0  # 중요! 수정해야 함! 범위 제한
+            if rotate_theta != 0:  # 방향 전환하면
+                [self.v_x, self.v_y] = util.rotate(rotate_theta, [self.v_x, self.v_y])
+                self.direction += rotate_theta
+                self.change_direction_check = True
+            else:  # 방향 전환 없으면 (=직진하면)
+                self.change_direction_check = False
 
     @staticmethod
     def multiply(arr):  # 생존확률 계산용 함수. (이 전투기를 향해 날아오는 여러 미사일의 kill prob 곱하는 역할)
@@ -55,8 +48,8 @@ class Flight(object):
 
 
 class Battery(object):
-    def __init__(self, id, x, y):
-        self.id = id
+    def __init__(self, b_id, x, y):
+        self.id = b_id
         self.x = x  # 포대 x좌표
         self.y = y  # 포대 y좌표
         self.v = 0.816  # 미사일 속도 (kill prob 등 계산 편하게 하려고 여기서 씀. 같은 포대에서 발사된 미사일 속도 동일 가정)
@@ -80,6 +73,7 @@ class Missile(object):
         self.flight = target_flight  # 맞추려고 향하고 있는 전투기 객체
         self.x = launching_battery.x  # 미사일 생성 시 초기 위치 = 발사한 포대 위치
         self.y = launching_battery.y
+        self.battery.radar_capa -= 1
         self.battery.total_launching += 1
         self.id = [self.battery, self.flight, self.battery.total_launching]  # 같은 포대에서 같은 전투기로 여러 미사일 쏠 수 있어서, id[-1]로 구분.
         self.flight_t = 0  # 지금까지 비행한 시간
@@ -114,7 +108,9 @@ class Missile(object):
                              * util.calc_kill_prob_angle(theta_mf)
 
     def transit_route(self):
-        # 시간 1단위 지났을 때, 전투기를 향해 날아가는 이 미사일의 self.x, self.y, self.v_x, self.v_y 업데이트하는 곳. 만들어야 함.
+        """
+        시간 1단위 지났을 때, 이 미사일의 위치 및 시간 정보 업데이트.
+        """
         self.x += self.v_x
         self.y += self.v_y
         self.flight_t += 1
