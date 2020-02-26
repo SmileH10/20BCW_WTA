@@ -17,7 +17,6 @@ class Env(object):
 
     def run_simulation(self):
         while not self.check_termination():
-            # 포대 별로 action 정하게끔 하기. self.state_transition에서 action 직후(시간경과x) 변환과 시간경과 이동을 분리하기.
             for b in self.battery:
                 best_action = self.agent.select_action(self, b)  # 1) 현재 state에서 가장 좋은 action 선택하기
                 self.transit_afteraction_state(best_action)
@@ -32,7 +31,7 @@ class Env(object):
         """
 
     def transit_afteraction_state(self, action):
-        # action (어떤 포대가 어느 전투기로 "미사일"을 발사했다) 을 반영하기.
+        # action (어떤 포대가 어느 전투기로 "미사일"을 발사했다) 을 반영. 시간 경과 없음
         if action != 'DoNothing':
             action_b = action[0]
             action_f = action[1]
@@ -48,6 +47,8 @@ class Env(object):
         # 전투기/포대/미사일 시간경과하면서 생긴 변화 반영
         for f in self.flight:
             f.transit_route()  # 전투기 1칸 이동. 방향 회전할 수도 있음.
+            if f.kill_asset:
+                del(self.flight[f.id])
         for b in self.battery:
             b.transit_reload()  # 포대 재장전 시간 -1
         for m in self.missile:
