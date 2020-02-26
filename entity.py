@@ -25,6 +25,12 @@ class Flight(object):
         self.change_direction_check = False  # 직전 시점에서 방향을 바꿨는지 기록: 미사일의 info를 새로 update 할 지 말 지 고를 때 사용.
         self.kill_asset = False  # 자산에 도달해서 파괴성공했는지 체크. 자산에 도달한 비행기 없앨 때 사용.
 
+        # 방향전환 가중치 (전투기 행동특성)
+        self.w_m = 2 + random()  # 관성 가중치 (현재 진행방향 유지하는 것에 대한 가중치). range: [2, 3]
+        self.w_a = 2 + random()  # 자산 방향 가중치. 가까울수로 크게. range: (0, inf). 난수 0일 때 거리100일때 0, 거리45일때 1
+        self.w_b1 = -0.7 - random()  # 가장 가까운 포대 중심 피하는 경로 가중치. 음수값이어야 하며, 작을수록(절대값이 클수록) 더 열심히 피함. range: [-0.7,-1.7]
+        self.w_b2 = -2 - self.w_b1  # 두 번째로 가까운 포대 중심 피하는 경로 가중치. w_b1 + w_b2 = -2. range[-0.3, -1.3]
+
     def transit_route(self, env):
         if env.sim_t < self.start_t:  # 전투기 출발시간이 아직 안됐으면
             return  # 움직이지 않음
@@ -54,21 +60,26 @@ class Flight(object):
 
         # 2) theta_fb1, theta_fb2 찾기
         # # 가장 가까운 포대 2개 찾기
-        battery_sort = [b for b in env.battery].sort(key=lambda x: util.calc_object_dist(self, x))
-        b1 = battery_sort[0]
-        b2 = battery_sort[1]
+        battery_list = [b for b in env.battery.values()]
+        battery_list.sort(key=lambda x: util.calc_object_dist(self, x))
+        b1 = battery_list[0]
+        b2 = battery_list[1]
         v_fb1 = [b1.x - self.x, b1.y - self.y]
         v_fb2 = [b2.x - self.x, b2.y - self.y]
         theta_fb1 = util.calc_theta(v_f, v_fb1)
         theta_fb2 = util.calc_theta(v_f, v_fb2)
 
         # 3) 계산!
-        w_m = 2 + random()  # 관성 가중치 (현재 진행방향 유지하는 것에 대한 가중치). range: [2, 3]
-        w_a = max(0.0, random() + 20 / math.sqrt(util.enorm(v_fa)) - 2)  # 자산 방향 가중치. 가까울수로 크게. range: (0, inf). 난수 0일 때 거리100일때 0, 거리45일때 1
-        w_b1 = -0.7 - random()  # 가장 가까운 포대 중심 피하는 경로 가중치. 음수값이어야 하며, 작을수록(절대값이 클수록) 더 열심히 피함. range: [-0.7,-1.7]
-        w_b2 = -2 - w_b1    # 두 번째로 가까운 포대 중심 피하는 경로 가중치. w_b1 + w_b2 = -2. range[-0.3, -1.3]
-        rotate_theta = (w_a * theta_fa + w_b1 * theta_fb1 + w_b2 * theta_fb2)/(w_m + w_a + w_b1 + w_b2)
-        assert w_m + w_a + w_b1 + w_b2 > 0
+        w_a = max(0.0, self.w_a + 20 / math.sqrt(util.enorm(v_fa)) - 2)
+        w_b1 = self.w_b1 * min(1.0, max(0.0,  30 / util.enorm(v_fb1) - 1))
+        w_b2 = self.w_b2 * min(1.0, max(0.0,  30 / util.enorm(v_fb2) - 1))
+        # if self.id == 0 and env.sim_t % 10 == 0:
+        #     print("weight: %.1f, %.1f, %.1f, %.1f" % (self.w_m, w_a, w_b1, w_b2))
+        #     print("theta: %.1f, %.1f, %.1f, %.1f"
+        #           % (self.direction*180/math.pi, theta_fa*180/math.pi, theta_fb1*180/math.pi, theta_fb2*180/math.pi))
+        rotate_theta = (w_a * theta_fa + w_b1 * theta_fb1 + w_b2 * theta_fb2)/(self.w_m + w_a + w_b1 + w_b2)
+        # if self.id == 0 and env.sim_t % 10 == 0 : print("raw_rotate_theta: %.2f" % (rotate_theta*180/math.pi))
+        assert self.w_m + w_a + w_b1 + w_b2 > 0
 
         # 4) 너무 회전각 작으면 그냥 직진하기
         if abs(rotate_theta) < 1 * math.pi / 180.0:
@@ -127,31 +138,30 @@ class Missile(object):
         self.y = launching_battery.y
         self.battery.radar_capa -= 1
         self.battery.total_launching += 1
-        self.id = [self.battery, self.flight, self.battery.total_launching]  # 같은 포대에서 같은 전투기로 여러 미사일 쏠 수 있어서, id[-1]로 구분.
+        self.id = (self.battery.id, self.flight.id, self.battery.total_launching)  # 같은 포대에서 같은 전투기로 여러 미사일 쏠 수 있어서, id[-1]로 구분.
         self.flight_t = 0  # 지금까지 비행한 시간
-        self.update_info(target_flight, init=True)
+        self.update_info(init=True)
 
-    def update_info(self, f, init=False):
+    def update_info(self, init=False):
         """
         self.expc_arrt: 도착(=충돌)까지 남은 시간 기록
         self.kill_prob: 충돌 시 예상 파괴확률 기록
         self.v_x, self.v_y: 미사일 방향전환
         """
-        if f.change_direction_check or init:  # 비행기가 방향 바꿨거나 or 처음 미사일이 생성되었으면, 새로 계산하기
-            d_fm = [self.x - f.x, self.y - f.y]  # 전투기->미사일 벡터(d_fm) 생성
-            v_f = [f.v_x, f.v_y]  # 전투기 속도 벡터
+        if self.flight.change_direction_check or init:  # 비행기가 방향 바꿨거나 or 처음 미사일이 생성되었으면, 새로 계산하기
+            d_fm = [self.x - self.flight.x, self.y - self.flight.y]  # 전투기->미사일 벡터(d_fm) 생성
+            v_f = [self.flight.v_x, self.flight.v_y]  # 전투기 속도 벡터
             theta_fd = util.calc_theta(v_f, d_fm)  # 전투기 벡터(f)와 전투기->미사일 벡터(d_fm) 간 각도 (-pi~pi)
             theta_md = math.asin(math.sin(theta_fd) / 3)  # 미사일->전투기 벡터(-d_fm)와 미사일 속도 벡터(m) 간 각도 (-0.5pi~0.5pi)
-            v_m = util.rotate_vector(theta_md, -1 * d_fm)  # 미사일 벡터(v_m)를 시계방향으로 회전
-            v_m /= math.sqrt(v_m[0] ** 2 + v_m[1] ** 2)  # 단위벡터로 만들고
-            v_m *= self.battery.v  # v_m 크기를 미사일 속력 크기로 조절
+            v_m = util.rotate_vector(theta_md, [-1 * d_fm[i] for i in range(len(d_fm))])  # 미사일 벡터(v_m)를 시계방향으로 회전
+            v_m = [v_m[i] * self.battery.v / util.enorm(v_m) for i in range(len(v_m))]  # v_m 크기를 미사일 속력 크기로 조절
             self.v_x = v_m[0]
             self.v_y = v_m[1]
             theta_mf = math.pi - abs(theta_md + theta_fd)  # 미사일(m)과 전투기(f)의 충돌 각도
             self.expc_arrt = util.enorm(d_fm) / util.enorm([v_f[0] - v_m[0], v_f[1] - v_m[1]])  # 남은 도착시간 = fm 간 거리 / (전투기속도벡터 - 미사일 속도벡터)
-            # 미사일과 전투기의 충돌지점(p) 검토
-            assert [self.x + self.expc_arrt * self.v_x, self.y + self.expc_arrt * self.v_y] \
-                   == [f.x + self.expc_arrt * f.v_x, f.y + self.expc_arrt * f.v_y]
+            # 미사일과 전투기의 충돌지점(p) 검토. 임시 검산용
+            assert abs(self.x + self.expc_arrt * self.v_x - (self.flight.x + self.expc_arrt * self.flight.v_x)) < 0.00001
+            assert abs(self.y + self.expc_arrt * self.v_y - (self.flight.y + self.expc_arrt * self.flight.v_y)) < 0.00001
             # 파괴확률 = 포대-충돌위치 간 거리(x) 미사일의 총 이동거리(o) 함수 * 충돌각도 함수
             self.kill_prob = util.calc_kill_prob_dist((self.flight_t + self.expc_arrt) * self.battery.v) \
                              * util.calc_kill_prob_angle(theta_mf)
