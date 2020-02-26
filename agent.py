@@ -11,7 +11,7 @@ def get_actionset(env, b):
     :return: [(battery object1, flight object1), (b2, f2), (b3, f3), ... ]
     """
     action_set = []
-    for f in env.flight:
+    for f in env.flight.values():
         if calc_object_dist(b, f) <= b.radius and b.radar_capa > 0 and b.reload == 0:
             # 사정거리 안에 있음 + radar 용량 있음 + 재장전시간 조건 만족
             # 먼 미래에 수정! 사정거리 안에 있다가 밖으로 나가도 격추 가능 가정.
@@ -29,8 +29,10 @@ class Greedy(object):
         actionset = get_actionset(env, battery)
         best_kill_prob = float("-inf")
         best_a = "DoNothing"
-        # Greedy는 쏠 수 있는 데 안 쏘는 거 없다고 가정.
+        # Greedy는 쏠 수 있는 데 안 쏘는 거 없다고 가정. 단, flight을 향해 날아가고 있는 다른 미사일이 2개 있으면 안 쏨.
         for a in actionset:
+            if sum([1 for m in env.missile.values() if m.flight == a[1]]) == 2:
+                continue
             temp_kill_prob = calc_bf_kill_prob(a[0], a[1])
             if temp_kill_prob > best_kill_prob:
                 best_kill_prob = temp_kill_prob
