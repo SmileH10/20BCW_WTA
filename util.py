@@ -18,14 +18,13 @@ def calc_bf_kill_prob(battery, flight):
     v_f = [flight.v_x, flight.v_y]  # 전투기 속도벡터
     theta_fd = calc_theta(v_f, d_fm)  # 전투기 벡터(f)와 전투기->미사일 벡터(d_fm) 간 각도 (-pi~pi)
     theta_md = math.asin(math.sin(theta_fd) / 3)  # 미사일->전투기 벡터(-d_fm)와 미사일 속도 벡터(m) 간 각도 (-0.5pi~0.5pi)
-    v_m = rotate_vector(theta_md, [-1 * d_fm[i] for i in range(len(d_fm))])  # 미사일->전투기 벡터(-d_fm)를 theta_md만큼 회전해서 미사일 벡터(v_m)를 만듦
-    v_m = [v_m[i] * battery.v / enorm(v_m) for i in range(len(v_m))]  # v_m 크기를 미사일 속력 크기로 조절
+    v_m = rotate(theta_md, -1 * d_fm)  # 미사일->전투기 벡터(-d_fm)를 theta_md만큼 회전해서 미사일 벡터(v_m)를 만듦
+    v_m /= math.sqrt(v_m[0] ** 2 + v_m[1] ** 2)  # 단위벡터로 크기 조절하고
+    v_m *= battery.v  # v_m 크기를 미사일 속력 크기로 조절
     theta_mf = math.pi - abs(theta_md + theta_fd)  # 미사일(m)과 전투기(f)의 충돌 각도
     expc_arrt = enorm(d_fm) / enorm([v_f[0] - v_m[0], v_f[1] - v_m[1]])  # 남은 도착시간 = fm 간 거리 / (전투기속도벡터 - 미사일 속도벡터)
     p = [battery.x + expc_arrt * v_m[0], battery.y + expc_arrt * v_m[1]]  # 미사일과 전투기의 충돌지점(p)
-    # p2는 임시로 코드 잘 작성되었는지 검산용.
-    p2 = [flight.x + expc_arrt * flight.v_x, flight.y + expc_arrt * flight.v_y]
-    assert math.sqrt((p[0]-p2[0])**2+(p[1]-p2[1])**2) < 0.00001  # 충돌지점 검산
+    assert p == [flight.x + expc_arrt * flight.v_x, flight.y + expc_arrt * flight.v_y]  # 충돌지점 검산
     # 파괴확률 = 포대-충돌위치 간 거리 함수 * 충돌각도 함수
     kill_prob = calc_kill_prob_dist(enorm([battery.x - p[0], battery.y - p[1]]))\
                 * calc_kill_prob_angle(theta_mf)
@@ -33,8 +32,8 @@ def calc_bf_kill_prob(battery, flight):
 
 
 def calc_kill_prob_dist(dist):
-    # 거리에 따른 파괴 확률. 작성해야 함. 일단 대충 해놓음. 엑셀에서 불러오게 해야 할까? 겠지?
-    return 1 - dist / 40.0
+    # 작성해야 함. 거리에 따른 파괴 확률. 엑셀에서 불러오게 해야 할까? 겠지?
+    return 1 - dist / 60.0
 
 
 def calc_kill_prob_angle(theta):
@@ -74,7 +73,7 @@ def calc_theta(v1, v2):
     :param v2: 2D vector list (to)
     :return: angle from v1 to v2. 범위: [-pi, pi]
     """
-    theta_cos = math.acos((v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2)))  # v1->v2 벡터 각도 (0 ~ pi)
+    theta_cos = math.acos((v1[0] * v2[0] + v1[1] + v2[1]) / (enorm(v1) * enorm(v2)))  # v1->v2 벡터 각도 (0 ~ pi)
     theta = math.asin((v1[0] * v2[1] - v2[0] * v1[1]) / (enorm(v1) * enorm(v2)))  # v1->v2 벡터 각도 (-0.5pi ~ 0.5pi)
     if theta_cos < 0:
         if theta >= 0:
