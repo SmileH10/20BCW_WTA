@@ -19,12 +19,12 @@ class GraphicDisplay(tk.Tk):
         self.geometry('{0}x{1}'.format(self.width * self.unit + 50, self.height * self.unit + 50))
 
         self.f_imgfile, self.b_imgfile, self.m_imgfile, self.a_imgfile = self.load_images()  # canvas에 image로 그린 객체들 딕셔너리
-        self.f_img, self.b_img, self.m_img, self.a_img, self.diameter_img = {}, {}, {}, {}, {}  # canvas에 image로 그린 객체들 딕셔너리
+        self.f_img, self.b_img, self.m_img, self.a_img = {}, {}, {}, {}  # canvas에 image로 그린 객체들 딕셔너리
 
         self.canvas = self._build_canvas()
         self.time_text = self.canvas.create_text(10, 10, text="time = 0.00", font=('Helvetica', '10', 'normal'), anchor="nw")
         self.iter = 0
-        self.sim_speed = 1/10000.0  # sec:sim_t
+        self.sim_speed = 1/1000.0  # sec:sim_t
         self.event_cnt = 0
         self.is_moving = 0  # pause 기능을 위한 변수.
         # self.data = [[]]  # data[iter][event_cnt] = [sim_t, flight(object dic), battery, missile] 형태로 저장.
@@ -67,9 +67,6 @@ class GraphicDisplay(tk.Tk):
         change_speed_button.configure(width=8, activebackground="#33B5E5")
         canvas.create_window(self.width * self.unit * 0.945, self.height * self.unit + 10, window=change_speed_button)
 
-        canvas.create_text(10, self.height * self.unit - 15,
-                           text="Icons made by Freepick, Eucalyp amd Dave Gandy from www.flaticon.com", font=('Helvetica', '8', 'normal'), anchor="nw")
-
         canvas.pack()
 
         return canvas
@@ -98,35 +95,45 @@ class GraphicDisplay(tk.Tk):
     #         self.canvas.delete(self.iter_text)
     #     self.iter_text = self.canvas.create_text(self.width * self.unit - 10, 10, fill="black", text=iter_str, font=font, anchor=anchor)
 
-    def load_images(self):
+    @staticmethod
+    def load_images():
         # background = ImageTk.PhotoImage(Image.open("./img/background2.png").resize((WIDTH * UNIT, HEIGHT * UNIT)))
         f_imgfile, b_imgfile, m_imgfile, a_imgfile = {}, {}, {}, {}
         for i in range(12):
-            m_imgfile[i] = ImageTk.PhotoImage(Image.open("./img/circle%d.png" % (i % 12)).resize((3 * self.unit, 3 * self.unit)))
+            f_imgfile[i] = ImageTk.PhotoImage(Image.open("./img/triangle%d.png" % i).resize((15, 15)))
+            m_imgfile[i] = ImageTk.PhotoImage(Image.open("./img/circle%d.png" % i).resize((15, 15)))
+            b_imgfile[i] = ImageTk.PhotoImage(Image.open("./img/rectangle.png").resize((15, 15)))
+            a_imgfile[i] = ImageTk.PhotoImage(Image.open("./img/rectangle.png").resize((15, 15)))
         return f_imgfile, b_imgfile, m_imgfile, a_imgfile
 
     def draw_status(self, status):
-        # status = (sim_t, f_dic, m_dic, b_dic, a_dic); _dic: object를 담은 딕셔너리
+        # status = (sim_t, f_dic, m_dic, b_dic)
+        # object를 담은 딕셔너리
         flight = status[1]  # f_id, x, y, direction
         missile = status[2]  # m_id, x, y
-        asset = status[3]
-        if len(status) >= 5:
-            battery = status[4]  # b_id, x, y
+        if len(status) >= 4:
+            battery = status[3]  # b_id, x, y
             for b_id in battery.keys():
                 y = battery[b_id].x * self.unit
                 x = self.width * self.unit - battery[b_id].y * self.unit
-                self.b_imgfile[b_id] = ImageTk.PhotoImage(Image.open('./img/battery.png').resize((8 * self.unit, 8 * self.unit)))
+                self.b_imgfile[b_id] = ImageTk.PhotoImage(Image.open('./img/rectangle.png').resize((15, 15)))
                 self.b_img[b_id] = {'image': self.canvas.create_image(x, y, image=self.b_imgfile[b_id % 12]),
                                     'text': self.canvas.create_text(x, y, text=str(b_id))}
-                self.canvas.create_oval(x - 40 * self.unit, y - 40 * self.unit, x + 40 * self.unit, y + 40 * self.unit, width=3)
+            # asset = status[4]
+            # for a_id in asset.keys():
+            #     y = asset[a_id].x * self.unit
+            #     x = self.width * self.unit - asset[a_id].y * self.unit
+            #     a_imgfile = ImageTk.PhotoImage(Image.open("./img/rectangle.png").resize((30, 30)))
+            #     self.a_img[a_id] = {'image': self.canvas.create_image(x, y, image=a_imgfile),
+            #                         'text': self.canvas.create_text(x, y, text=str(a_id))}
 
         for f_id in self.f_img.keys():
             self.canvas.delete(self.f_img[f_id]['image'])
             self.canvas.delete(self.f_img[f_id]['text'])
 
-        for a_id in self.a_img.keys():
-            self.canvas.delete(self.a_img[a_id]['image'])
-            self.canvas.delete(self.a_img[a_id]['text'])
+        # for a_id in self.a_img.keys():
+        #     self.canvas.delete(self.a_img[a_id]['image'])
+        #     self.canvas.delete(self.a_img[a_id]['text'])
 
         for m_id in self.m_img.keys():
             self.canvas.delete(self.m_img[m_id]['image'])
@@ -135,25 +142,17 @@ class GraphicDisplay(tk.Tk):
         for f_id in flight.keys():
             y = flight[f_id].x * self.unit
             x = self.width * self.unit - flight[f_id].y * self.unit
-            rotate_degree = -1 * (flight[f_id].direction + 0.5 * math.pi) * 180.0 / math.pi
-            self.f_imgfile[f_id] = ImageTk.PhotoImage(Image.open("./img/flight%d.png"
-                                                                 % (f_id % 12)).rotate(rotate_degree).resize((5 * self.unit, 5 * self.unit)))
+            rotate_degree = -90
+            rotate_degree += (flight[f_id].direction + 0.5 * math.pi) * 180.0 / math.pi
+            self.f_imgfile[f_id % 12] = ImageTk.PhotoImage(Image.open("./img/triangle%d.png" % (f_id % 12)).rotate(rotate_degree).resize((15, 15)))
             self.f_img[f_id] = {'image': self.canvas.create_image(x, y, image=self.f_imgfile[f_id % 12]),
                                 'text': self.canvas.create_text(x, y, text=str(f_id))}
 
         for m_id in missile.keys():
             y = missile[m_id].x * self.unit
             x = self.width * self.unit - missile[m_id].y * self.unit
-            self.m_img[m_id] = {'image': self.canvas.create_image(x, y, image=self.m_imgfile[m_id[1] % 12]),
+            self.m_img[m_id] = {'image': self.canvas.create_image(x, y, image=self.m_imgfile[m_id[0] % 12]),
                                 'text': self.canvas.create_text(x, y, text=str(m_id[1])+", "+str(m_id[2]))}
-
-        for a_id in asset.keys():
-            y = asset[a_id].x * self.unit
-            x = self.width * self.unit - asset[a_id].y * self.unit
-            self.a_imgfile[a_id] = ImageTk.PhotoImage(
-                Image.open("./img/triangle%d.png" % (a_id % 12)).resize((5 * self.unit, 5 * self.unit)))
-            self.a_img[a_id] = {'image': self.canvas.create_image(x, y, image=self.a_imgfile[a_id]),
-                                'text': self.canvas.create_text(x, y, text=str(a_id))}
 
     def run_entire(self):
         self.is_moving = 1
@@ -228,7 +227,7 @@ class GraphicDisplay(tk.Tk):
 
         label = tk.Label(win_entry)
         label.config(text="enter simulation speed \n (sec / 1 simulation time. the larger the faster) "
-                          "\n default: 10000 (10000 times faster)")
+                          "\n default: 1000 (1000 times faster)")
         label.pack(ipadx=5, ipady=5)
         textbox = tk.ttk.Entry(win_entry, width=10, textvariable=input_num)
         textbox.pack(ipadx=5, ipady=5)

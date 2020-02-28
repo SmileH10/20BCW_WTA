@@ -10,8 +10,8 @@ if __name__ == '__main__':
     random.seed(0)
 
     # map 생성
-    map_width = 200.0  # (km)
-    map_height = 400.0  # (km)
+    map_width = 100.0  # (km)
+    map_height = 250.0  # (km)
     """
     flight 출발좌표: (x, map_height)
     battery 위치좌표: (x, 사거리 + 10)
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     asset_num = 20
     asset = {}
     for a in range(asset_num):
-        asset[a] = Asset(a_id=a, x=random.random() * map_width, y=5, value=1)
+        asset[a] = Asset(x=random.random() * map_width, y=0, value=1)
 
     # flight 생성
     flight_num = asset_num  # 전체 flight 대수
@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
     rl = RL()
     greedy = Greedy()
-    gui = GraphicDisplay(map_height, map_width, unit_pixel=3)
+    gui = GraphicDisplay(map_height, map_width, unit_pixel=5)
 
     env = Env(asset, flight, battery)
     env.agent = greedy  # rl 과 greedy 중에 선택
