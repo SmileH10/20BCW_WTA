@@ -27,10 +27,10 @@ class Flight(object):
         self.kill_asset = False  # 자산에 도달해서 파괴성공했는지 체크. 자산에 도달한 비행기 없앨 때 사용.
 
         # 방향전환 가중치 (전투기 행동특성)
-        self.w_m = 2 + random()  # 관성 가중치 (현재 진행방향 유지하는 것에 대한 가중치). range: [2, 3]
-        self.w_a = 2 + random()  # 자산 방향 가중치. 가까울수로 크게. range: (0, inf). 난수 0일 때 거리100일때 0, 거리45일때 1
-        self.w_b1 = -0.7 - random()  # 가장 가까운 포대 중심 피하는 경로 가중치. 음수값이어야 하며, 작을수록(절대값이 클수록) 더 열심히 피함. range: [-0.7,-1.7]
-        self.w_b2 = -2 - self.w_b1  # 두 번째로 가까운 포대 중심 피하는 경로 가중치. w_b1 + w_b2 = -2. range[-0.3, -1.3]
+        self.w_m = 3 + random()  # 관성 가중치 (현재 진행방향 유지하는 것에 대한 가중치). range: [2, 3]
+        self.w_a = 3 + random()  # 자산 방향 가중치. 가까울수로 크게. range: (0, inf). 난수 0일 때 거리100일때 0, 거리45일때 1
+        self.w_b1 = - 0.8 - random()  # 가장 가까운 포대 중심 피하는 경로 가중치. 음수값이어야 하며, 작을수록(절대값이 클수록) 더 열심히 피함. range: [-0.7,-1.7]
+        self.w_b2 = random()  # - 2 - self.w_b1  # 두 번째로 가까운 포대 중심 피하는 경로 가중치. w_b1 + w_b2 = -2. range[-0.3, -1.3]
 
     def transit_route(self, env):
         if env.sim_t < self.start_t:  # 전투기 출발시간이 아직 안됐으면
@@ -38,6 +38,16 @@ class Flight(object):
         else:  # 출발시간이 지났으면 움직임 반영하기.
             self.x += self.v_x
             self.y += self.v_y
+            if self.x >= env.map_width:
+                self.x = env.map_width
+                self.v_x = 0
+                self.v_y = -0.272
+                self.direction = -0.5 * math.pi
+            elif self.x <= 0:
+                self.x = 0
+                self.v_x = 0
+                self.v_y = -0.272
+                self.direction = -0.5 * math.pi
             # 목표 자산에 도달했는지 확인
             if self.y <= self.target_asset.y:
                 # 결과 기록 함수 만들기!!!
@@ -71,15 +81,10 @@ class Flight(object):
         theta_fb2 = util.calc_theta(v_f, v_fb2)
 
         # 3) 계산!
-        w_a = max(0.0, self.w_a + 20 / math.sqrt(util.enorm(v_fa)) - 2)
-        w_b1 = self.w_b1 * min(1.0, max(0.0,  30 / util.enorm(v_fb1) - 1))
-        w_b2 = self.w_b2 * min(1.0, max(0.0,  30 / util.enorm(v_fb2) - 1))
-        # if self.id == 0 and env.sim_t % 10 == 0:
-        #     print("weight: %.1f, %.1f, %.1f, %.1f" % (self.w_m, w_a, w_b1, w_b2))
-        #     print("theta: %.1f, %.1f, %.1f, %.1f"
-        #           % (self.direction*180/math.pi, theta_fa*180/math.pi, theta_fb1*180/math.pi, theta_fb2*180/math.pi))
+        w_a = max(0.0, self.w_a + 30 / math.sqrt(util.enorm(v_fa)) - 3)
+        w_b1 = self.w_b1 * min(1.0, max(0.0,  80 / util.enorm(v_fb1) - 1))
+        w_b2 = self.w_b2 * min(1.0, max(0.0,  80 / util.enorm(v_fb2) - 1))
         rotate_theta = (w_a * theta_fa + w_b1 * theta_fb1 + w_b2 * theta_fb2)/(self.w_m + w_a + w_b1 + w_b2)
-        # if self.id == 0 and env.sim_t % 10 == 0 : print("raw_rotate_theta: %.2f" % (rotate_theta*180/math.pi))
         assert self.w_m + w_a + w_b1 + w_b2 > 0
 
         # 4) 너무 회전각 작으면 그냥 직진하기
@@ -87,11 +92,11 @@ class Flight(object):
             rotate_theta = 0
             return rotate_theta
 
-        # 5) 1초 최대 회전 각도를 -4 ~ 4도로 제한
-        if rotate_theta > 4 * math.pi / 180.0:
-            rotate_theta = 4 * math.pi / 180.0
-        elif rotate_theta < - 4 * math.pi / 180.0:
-            rotate_theta = - 4 * math.pi / 180.0
+        # 5) 1초 최대 회전 각도를 -3 ~ 3도로 제한
+        if rotate_theta > 3 * math.pi / 180.0:
+            rotate_theta = 3 * math.pi / 180.0
+        elif rotate_theta < - 3 * math.pi / 180.0:
+            rotate_theta = - 3 * math.pi / 180.0
 
         # 6) 진행방향을 항상 아래로 제한. 즉, -pi ~ 0로 제한.
         if self.direction + rotate_theta > 0:

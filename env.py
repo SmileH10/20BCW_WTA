@@ -9,11 +9,13 @@ class Env(object):
     시뮬레이션
     State transition 하는 곳
     """
-    def __init__(self, asset, flight, battery):
+    def __init__(self, asset, flight, battery, map_width, map_height):
         self.asset = asset
         self.flight = flight  # flight 객체들을 저장하는 딕셔너리
         self.battery = battery  # battery 객체들을 저장하는 딕셔너리
         self.missile = {}  # missile 객체들을 저장하는 딕셔너리
+        self.map_width = map_width
+        self.map_height = map_height
         self.agent = None
         self.sim_t = 0  # 현재 시뮬레이션 시간
         self.gui = None

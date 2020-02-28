@@ -7,7 +7,7 @@ from time import sleep
 import math  # pi 사용
 import pickle
 import os
-
+from util import calc_theta
 
 class GraphicDisplay(tk.Tk):
     def __init__(self, width, height, unit_pixel=4, load_file=False):
@@ -24,7 +24,7 @@ class GraphicDisplay(tk.Tk):
         self.canvas = self._build_canvas()
         self.time_text = self.canvas.create_text(10, 10, text="time = 0.00", font=('Helvetica', '10', 'normal'), anchor="nw")
         self.iter = 0
-        self.sim_speed = 1/10000.0  # sec:sim_t
+        self.sim_speed = 1/100000.0  # sec:sim_t
         self.event_cnt = 0
         self.is_moving = 0  # pause 기능을 위한 변수.
         # self.data = [[]]  # data[iter][event_cnt] = [sim_t, flight(object dic), battery, missile] 형태로 저장.
@@ -36,38 +36,38 @@ class GraphicDisplay(tk.Tk):
 
     def _build_canvas(self):
         canvas = tk.Canvas(self, bg='white',
-                           height=self.height * self.unit,
-                           width=self.width * self.unit)
+                           height=self.height * self.unit + 15,
+                           width=self.width * self.unit + 15)
         # canvas.create_image(self.width * UNIT / 2, self.height * UNIT / 2, image=self.backgroundimg)
 
         run_entire_button = tk.Button(self, text="Run(entire)", command=self.run_entire)
         run_entire_button.configure(width=10, activebackground="#33B5E5")
-        canvas.create_window(self.width * self.unit * 0.08, self.height * self.unit + 10, window=run_entire_button)  # 왼쪽상단이 (0, 0) 인듯
+        canvas.create_window(self.width * self.unit * 0.08, self.height * self.unit + 25, window=run_entire_button)  # 왼쪽상단이 (0, 0) 인듯
         run_onestep_forward_button = tk.Button(self, text="Run(1step forward)", command=self.run_onestep_forward)
         run_onestep_forward_button.configure(width=17, activebackground="#33B5E5")
-        canvas.create_window(self.width * self.unit * 0.22, self.height * self.unit + 10, window=run_onestep_forward_button)
+        canvas.create_window(self.width * self.unit * 0.22, self.height * self.unit + 25, window=run_onestep_forward_button)
         run_onestep_backward_button = tk.Button(self, text="Run(1step backward)", command=self.run_onestep_backward)
         run_onestep_backward_button.configure(width=17, activebackground="#33B5E5")
-        canvas.create_window(self.width * self.unit * 0.385, self.height * self.unit + 10, window=run_onestep_backward_button)
+        canvas.create_window(self.width * self.unit * 0.385, self.height * self.unit + 25, window=run_onestep_backward_button)
         run_reset_button = tk.Button(self, text="reset", command=self.run_reset)
         run_reset_button.configure(width=8, activebackground="#33B5E5")
-        canvas.create_window(self.width * self.unit * 0.525, self.height * self.unit + 10, window=run_reset_button)
+        canvas.create_window(self.width * self.unit * 0.525, self.height * self.unit + 25, window=run_reset_button)
         run_pause_button = tk.Button(self, text="pause", command=self.run_pause)
         run_pause_button.configure(width=8, activebackground="#33B5E5")
-        canvas.create_window(self.width * self.unit * 0.61, self.height * self.unit + 10, window=run_pause_button)
+        canvas.create_window(self.width * self.unit * 0.61, self.height * self.unit + 25, window=run_pause_button)
 
         iter_minus_button = tk.Button(self, text="iter-", command=self.iter_minus)
         iter_minus_button.configure(width=8, activebackground="#33B5E5")
-        canvas.create_window(self.width * self.unit * 0.74, self.height * self.unit + 10, window=iter_minus_button)
+        canvas.create_window(self.width * self.unit * 0.74, self.height * self.unit + 25, window=iter_minus_button)
         iter_plus_button = tk.Button(self, text="iter+", command=self.iter_plus)
         iter_plus_button.configure(width=8, activebackground="#33B5E5")
-        canvas.create_window(self.width * self.unit * 0.825, self.height * self.unit + 10, window=iter_plus_button)
+        canvas.create_window(self.width * self.unit * 0.825, self.height * self.unit + 25, window=iter_plus_button)
 
         change_speed_button = tk.Button(self, text="speed", command=self.change_speed)
         change_speed_button.configure(width=8, activebackground="#33B5E5")
-        canvas.create_window(self.width * self.unit * 0.945, self.height * self.unit + 10, window=change_speed_button)
+        canvas.create_window(self.width * self.unit * 0.945, self.height * self.unit + 25, window=change_speed_button)
 
-        canvas.create_text(10, self.height * self.unit - 15,
+        canvas.create_text(10, self.height * self.unit,
                            text="Icons made by Freepick, Eucalyp amd Dave Gandy from www.flaticon.com", font=('Helvetica', '8', 'normal'), anchor="nw")
 
         canvas.pack()
@@ -101,8 +101,8 @@ class GraphicDisplay(tk.Tk):
     def load_images(self):
         # background = ImageTk.PhotoImage(Image.open("./img/background2.png").resize((WIDTH * UNIT, HEIGHT * UNIT)))
         f_imgfile, b_imgfile, m_imgfile, a_imgfile = {}, {}, {}, {}
-        for i in range(12):
-            m_imgfile[i] = ImageTk.PhotoImage(Image.open("./img/circle%d.png" % (i % 12)).resize((3 * self.unit, 3 * self.unit)))
+        # for i in range(100):
+        #     m_imgfile[i] = ImageTk.PhotoImage(Image.open("./img/circle%d.png" % (i % 12)).resize((3 * self.unit, 3 * self.unit)))
         return f_imgfile, b_imgfile, m_imgfile, a_imgfile
 
     def draw_status(self, status):
@@ -113,7 +113,7 @@ class GraphicDisplay(tk.Tk):
         if len(status) >= 5:
             battery = status[4]  # b_id, x, y
             for b_id in battery.keys():
-                y = battery[b_id].x * self.unit
+                y = self.height * self.unit - battery[b_id].x * self.unit
                 x = self.width * self.unit - battery[b_id].y * self.unit
                 self.b_imgfile[b_id] = ImageTk.PhotoImage(Image.open('./img/battery.png').resize((8 * self.unit, 8 * self.unit)))
                 self.b_img[b_id] = {'image': self.canvas.create_image(x, y, image=self.b_imgfile[b_id % 12]),
@@ -133,25 +133,28 @@ class GraphicDisplay(tk.Tk):
             self.canvas.delete(self.m_img[m_id]['text'])
 
         for f_id in flight.keys():
-            y = flight[f_id].x * self.unit
+            y = self.height * self.unit - flight[f_id].x * self.unit
             x = self.width * self.unit - flight[f_id].y * self.unit
-            rotate_degree = -1 * (flight[f_id].direction + 0.5 * math.pi) * 180.0 / math.pi
+            rotate_degree = (flight[f_id].direction + 0.5 * math.pi) * 180.0 / math.pi
             self.f_imgfile[f_id] = ImageTk.PhotoImage(Image.open("./img/flight%d.png"
                                                                  % (f_id % 12)).rotate(rotate_degree).resize((5 * self.unit, 5 * self.unit)))
-            self.f_img[f_id] = {'image': self.canvas.create_image(x, y, image=self.f_imgfile[f_id % 12]),
+            self.f_img[f_id] = {'image': self.canvas.create_image(x, y, image=self.f_imgfile[f_id]),
                                 'text': self.canvas.create_text(x, y, text=str(f_id))}
 
         for m_id in missile.keys():
-            y = missile[m_id].x * self.unit
+            y = self.height * self.unit - missile[m_id].x * self.unit
             x = self.width * self.unit - missile[m_id].y * self.unit
-            self.m_img[m_id] = {'image': self.canvas.create_image(x, y, image=self.m_imgfile[m_id[1] % 12]),
-                                'text': self.canvas.create_text(x, y, text=str(m_id[1])+", "+str(m_id[2]))}
+            rotate_degree = calc_theta([1, 1], [-missile[m_id].v_y, missile[m_id].v_x]) * 180.0 / math.pi
+            self.m_imgfile[m_id] = ImageTk.PhotoImage(
+                Image.open("./img/missile%d.png" % (m_id[1] % 12)).rotate(rotate_degree).resize((5 * self.unit, 5 * self.unit)))
+            self.m_img[m_id] = {'image': self.canvas.create_image(x, y, image=self.m_imgfile[m_id]),
+                                'text': self.canvas.create_text(x, y, text=str(m_id[2]))}
 
         for a_id in asset.keys():
-            y = asset[a_id].x * self.unit
+            y = self.height * self.unit - asset[a_id].x * self.unit
             x = self.width * self.unit - asset[a_id].y * self.unit
             self.a_imgfile[a_id] = ImageTk.PhotoImage(
-                Image.open("./img/triangle%d.png" % (a_id % 12)).resize((5 * self.unit, 5 * self.unit)))
+                Image.open("./img/triangle%d.png" % (a_id % 12)).resize((4 * self.unit, 4 * self.unit)))
             self.a_img[a_id] = {'image': self.canvas.create_image(x, y, image=self.a_imgfile[a_id]),
                                 'text': self.canvas.create_text(x, y, text=str(a_id))}
 

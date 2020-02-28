@@ -74,11 +74,7 @@ def calc_theta(v1, v2):
     :param v2: 2D vector list (to)
     :return: angle from v1 to v2. 범위: [-pi, pi]
     """
-    theta_cos = math.acos((v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2)))  # v1->v2 벡터 각도 (0 ~ pi)
-    theta = math.asin((v1[0] * v2[1] - v2[0] * v1[1]) / (enorm(v1) * enorm(v2)))  # v1->v2 벡터 각도 (-0.5pi ~ 0.5pi)
-    if theta_cos < 0:
-        if theta >= 0:
-            theta = math.pi - theta
-        else:
-            theta = - math.pi + theta
+    theta = math.acos((v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2)))  # v1->v2 벡터 각도 (0 ~ pi)
+    if (v1[0] * v2[1] - v2[0] * v1[1]) < 0:  # math.sin(theta_sin) = (v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2))
+        theta = - theta
     return theta

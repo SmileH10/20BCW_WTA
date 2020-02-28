@@ -7,11 +7,11 @@ import random
 
 
 if __name__ == '__main__':
-    random.seed(0)
+    random.seed(1)
 
     # map 생성
     map_width = 200.0  # (km)
-    map_height = 400.0  # (km)
+    map_height = 300.0  # (km)
     """
     flight 출발좌표: (x, map_height)
     battery 위치좌표: (x, 사거리 + 10)
@@ -21,16 +21,20 @@ if __name__ == '__main__':
     # asset 생성
     asset_num = 20
     asset = {}
+    temp_x = [random.random() for _ in range(asset_num)]
+    temp_x.sort()
     for a in range(asset_num):
-        asset[a] = Asset(a_id=a, x=random.random() * map_width, y=5, value=1)
+        asset[a] = Asset(a_id=a, x=temp_x[a] * map_width, y=5, value=1)
 
     # flight 생성
     flight_num = asset_num  # 전체 flight 대수
     time_interval = 30  # 첫 출발 flight ~ 마지막 출발 flight의 시간 간격 (unit_time)
     flight = {}
+    temp_x = [random.random() for _ in range(flight_num)]
+    temp_x.sort()
     for f in range(flight_num):
         # 일단 출발위치는 uniform 분포, 목표자산 아무거나 설정
-        flight[f] = Flight(f_id=f, init_x=random.random() * map_width, init_y=map_height, target_asset=asset[f],
+        flight[f] = Flight(f_id=f, init_x=temp_x[f] * map_width, init_y=map_height, target_asset=asset[f],
                            start_t=random.randint(0, time_interval))
         # temp_target_asset = np.argmin([calc_object_dist(asset[a], flight[f]) for a in range(asset_num)])
         # flight[f].target_asset = asset[int(temp_target_asset)]
@@ -41,14 +45,14 @@ if __name__ == '__main__':
     temp_x = map_width/2/battery_num
     for b in range(battery_num):
         # 일단 위치는 균등하게 퍼트려놓음.
-        battery[b] = Battery(b_id=b, x=temp_x, y=120)
+        battery[b] = Battery(b_id=b, x=temp_x, y=100)
         temp_x += map_width/battery_num
 
     rl = RL()
     greedy = Greedy()
-    gui = GraphicDisplay(map_height, map_width, unit_pixel=3)
+    gui = GraphicDisplay(map_height, map_width, unit_pixel=min(int(1200.0/map_height), int(600.0/map_width)))
 
-    env = Env(asset, flight, battery)
+    env = Env(asset, flight, battery, map_width, map_height)
     env.agent = greedy  # rl 과 greedy 중에 선택
     env.gui = gui
 
