@@ -19,7 +19,7 @@ class GraphicDisplay(tk.Tk):
         self.geometry('{0}x{1}'.format(self.width * self.unit + 50, self.height * self.unit + 50))
 
         self.f_imgfile, self.b_imgfile, self.m_imgfile, self.a_imgfile = self.load_images()  # canvas에 image로 그린 객체들 딕셔너리
-        self.f_img, self.b_img, self.m_img, self.a_img, self.diameter_img = {}, {}, {}, {}, {}  # canvas에 image로 그린 객체들 딕셔너리
+        self.f_img, self.b_img, self.m_img, self.a_img = {}, {}, {}, {}  # canvas에 image로 그린 객체들 딕셔너리
 
         self.canvas = self._build_canvas()
         self.time_text = self.canvas.create_text(10, 10, text="time = 0.00", font=('Helvetica', '10', 'normal'), anchor="nw")
