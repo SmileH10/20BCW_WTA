@@ -1,6 +1,7 @@
 from entity import Missile
 import random
 import math
+from copy import deepcopy
 
 
 class Env(object):
@@ -22,10 +23,23 @@ class Env(object):
             for b in self.battery.values():
                 best_action = self.agent.select_action(self, b)  # 1) 현재 state에서 가장 좋은 action 선택하기
                 self.transit_afteraction_state(best_action)
+            if self.gui:
+                if self.gui.event_cnt == 0:
+                    self.gui.data[0][self.gui.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.battery))
+                    self.gui.event_cnt += 1
+                else:
+                    if self.sim_t % 10 == 0 or self.gui.lenf != len(self.flight) or self.gui.lenm - len(self.missile) != 0:
+                        self.gui.data[0][self.gui.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile))
+                        self.gui.event_cnt += 1
+                self.gui.lenf = len(self.flight)
+                self.gui.lenm = len(self.missile)
             self.transit_next_state()  # 2) 1)에서 선택한 action을 수행해서 next_state로 이동하기
             if self.agent.name == 'rl':  # 3) Q 함수의 가중치 업데이트하기
                 self.agent.update_weight()
         print("simulation ends. print results...")
+        if self.gui:
+            self.gui.event_cnt = 0
+            self.gui.save_file()
         """    
         5) 다 종료되면, 결과 출력하기
             * 중간중간 결과 저장해서 엑셀/그래프... 저장
@@ -78,14 +92,15 @@ class Env(object):
         for b in self.battery.values():
             assert b.radar_capa == 2 - len([m for m in self.missile.values() if m.battery == b])
         # # 프린트 해보기
-        # print("sim_t: %.1f, self.flight: " % self.sim_t, [self.flight[i].id for i in self.flight.keys()])
-        # for f in self.flight.values():
-        #     if f.id == 0 and self.sim_t % 10 == 0:
-        #         print("f%d[%.1f,%.1f]: %.1f," % (f.id, f.x, f.y, 90+f.direction*180/math.pi), end=' ')
-        #         print("")
-        # for m in self.missile.values():
-        #     print("m%d[from %d to %d]," % (m.id[-1], m.battery.id, m.flight.id), end=' ', flush=True)
-        # print("")
+        # if self.sim_t % 10 == 0:
+        #     print("sim_t: %.1f, self.flight: " % self.sim_t, [self.flight[i].id for i in self.flight.keys()])
+        #     for f in self.flight.values():
+        #         if f.id == 0:
+        #             print("f%d[%.1f,%.1f]: %.1f," % (f.id, f.x, f.y, 90+f.direction*180/math.pi), end=' ')
+        #             print("")
+        #     for m in self.missile.values():
+        #         print("m%d[from %d to %d]," % (m.id[-1], m.battery.id, m.flight.id), end=' ', flush=True)
+        #     print("")
 
     def check_termination(self):
         """

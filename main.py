@@ -1,7 +1,7 @@
 from env import Env
 from agent import RL, Greedy
 from entity import Asset, Flight, Battery
-# from sim_GUI import GraphicDisplay
+from sim_GUI import GraphicDisplay
 
 import random
 
@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     # map 생성
     map_width = 100.0  # (km)
-    map_height = 300.0  # (km)
+    map_height = 250.0  # (km)
     """
     flight 출발좌표: (x, map_height)
     battery 위치좌표: (x, 사거리 + 10)
@@ -46,10 +46,15 @@ if __name__ == '__main__':
 
     rl = RL()
     greedy = Greedy()
-    # gui = GraphicDisplay()
+    gui = GraphicDisplay(map_height, map_width, unit_pixel=5)
 
     env = Env(asset, flight, battery)
     env.agent = greedy  # rl 과 greedy 중에 선택
-    # env.gui = gui
+    env.gui = gui
 
     env.run_simulation()
+    gui.mainloop()
+
+    # # Load GUI
+    # gui = GraphicDisplay(map_height, map_width, unit_pixel=5, load_file=True)
+    # gui.mainloop()
