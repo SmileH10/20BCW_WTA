@@ -25,11 +25,12 @@ class Env(object):
                 self.transit_afteraction_state(best_action)
             if self.gui:
                 if self.gui.event_cnt == 0:
-                    self.gui.data[0][self.gui.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.battery))
+                    self.gui.data[0][self.gui.event_cnt] = \
+                        (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset), deepcopy(self.battery))
                     self.gui.event_cnt += 1
                 else:
                     if self.sim_t % 10 == 0 or self.gui.lenf != len(self.flight) or self.gui.lenm - len(self.missile) != 0:
-                        self.gui.data[0][self.gui.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile))
+                        self.gui.data[0][self.gui.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset))
                         self.gui.event_cnt += 1
                 self.gui.lenf = len(self.flight)
                 self.gui.lenm = len(self.missile)
@@ -64,6 +65,7 @@ class Env(object):
         for fkey in list(self.flight.keys()):
             self.flight[fkey].transit_route(self)  # 전투기 1칸 이동. 방향 회전할 수도 있음.
             if self.flight[fkey].kill_asset:
+                del(self.asset[self.flight[fkey].target_asset.id])
                 del(self.flight[fkey])
         for b in self.battery.values():
             b.transit_reload()  # 포대 재장전 시간 -1

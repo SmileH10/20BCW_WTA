@@ -4,7 +4,8 @@ from random import random
 
 
 class Asset(object):
-    def __init__(self, x, y, value):
+    def __init__(self, a_id, x, y, value):
+        self.id = a_id
         self.x = x
         self.y = y
         self.value = value  # 자산 가치. 일단 넣어놨는데, 이거 안하기로 하지 않았나? 전투기가 어디로 향할지 방어는 모르니까.
