@@ -9,25 +9,28 @@ import pickle
 import os
 from util import calc_theta
 
+
 class GraphicDisplay(tk.Tk):
-    def __init__(self, width, height, unit_pixel=4, load_file=False):
+    def __init__(self, canvas_width, canvas_height, unit_pixel=4, load_file=False):
         super(GraphicDisplay, self).__init__()
         self.title('WTA Simulation')
-        self.width = int(width)  # 캔버스 가로 크기
-        self.height = int(height)  # 캔버스 세로 크기
+        self.width = int(canvas_width)  # 캔버스 가로 크기
+        self.height = int(canvas_height) + 15  # 캔버스 세로 크기
         self.unit = unit_pixel  # 단위픽셀 수
         self.geometry('{0}x{1}'.format(self.width * self.unit + 50, self.height * self.unit + 50))
 
-        self.f_imgfile, self.b_imgfile, self.m_imgfile, self.a_imgfile = self.load_images()  # canvas에 image로 그린 객체들 딕셔너리
+        self.f_imgfile, self.b_imgfile, self.m_imgfile, self.a_imgfile = {}, {}, {}, {}  # 각 객체가 image file 보유
         self.f_img, self.b_img, self.m_img, self.a_img = {}, {}, {}, {}  # canvas에 image로 그린 객체들 딕셔너리
 
         self.canvas = self._build_canvas()
-        self.time_text = self.canvas.create_text(10, 10, text="time = 0.00", font=('Helvetica', '10', 'normal'), anchor="nw")
+        self.time_text = self.canvas.create_text(10, 10, text="time = 0.0 sec (0h : 0m : 0.0s)", font=('Helvetica', '12', 'bold'), anchor="nw")
+        self.iter_text = self.canvas.create_text(self.width * self.unit - 10, 10,
+                                                 fill="black", text="iteration: 0", font=('Helvetica', '12', 'bold'), anchor="ne")
+
         self.iter = 0
         self.sim_speed = 1/100000.0  # sec:sim_t
         self.event_cnt = 0
         self.is_moving = 0  # pause 기능을 위한 변수.
-        # self.data = [[]]  # data[iter][event_cnt] = [sim_t, flight(object dic), battery, missile] 형태로 저장.
 
         if load_file:
             self.data = self.load_file()
@@ -63,9 +66,9 @@ class GraphicDisplay(tk.Tk):
         iter_plus_button.configure(width=8, activebackground="#33B5E5")
         canvas.create_window(self.width * self.unit * 0.825, self.height * self.unit + 25, window=iter_plus_button)
 
-        change_speed_button = tk.Button(self, text="speed", command=self.change_speed)
-        change_speed_button.configure(width=8, activebackground="#33B5E5")
-        canvas.create_window(self.width * self.unit * 0.945, self.height * self.unit + 25, window=change_speed_button)
+        change_iter_button = tk.Button(self, text="iter", command=self.change_iter)
+        change_iter_button.configure(width=8, activebackground="#33B5E5")
+        canvas.create_window(self.width * self.unit * 0.945, self.height * self.unit + 25, window=change_iter_button)
 
         canvas.create_text(10, self.height * self.unit,
                            text="Icons made by Freepick, Eucalyp amd Dave Gandy from www.flaticon.com", font=('Helvetica', '8', 'normal'), anchor="nw")
@@ -85,25 +88,17 @@ class GraphicDisplay(tk.Tk):
         hour = sim_t / (60.0 * 60)
         minute = sim_t % (60.0 * 60) / 60.0
         second = sim_t % 60.0
-        time_str = "time = %.1f secs (%d : %d : %.1f)" % (sim_t, hour, minute, second)
+        time_str = "time = %.1f sec (%dh : %dm : %.1fs)" % (sim_t, hour, minute, second)
         font = (font, str(size), style)
         self.canvas.delete(self.time_text)
         self.time_text = self.canvas.create_text(10, 10, fill="black", text=time_str, font=font, anchor=anchor)
 
-    # def printing_iter(self, font='Helvetica', size=12, style='bold', anchor="ne"):
-    #     pass
-    #     iter_str = "iteration: %d / %d (Total %d)" % (self.iter, len(self.data.keys()) - 1, len(self.data.keys()))
-    #     font = (font, str(size), style)
-    #     if hasattr(self, 'iter_text'):
-    #         self.canvas.delete(self.iter_text)
-    #     self.iter_text = self.canvas.create_text(self.width * self.unit - 10, 10, fill="black", text=iter_str, font=font, anchor=anchor)
-
-    def load_images(self):
-        # background = ImageTk.PhotoImage(Image.open("./img/background2.png").resize((WIDTH * UNIT, HEIGHT * UNIT)))
-        f_imgfile, b_imgfile, m_imgfile, a_imgfile = {}, {}, {}, {}
-        # for i in range(100):
-        #     m_imgfile[i] = ImageTk.PhotoImage(Image.open("./img/circle%d.png" % (i % 12)).resize((3 * self.unit, 3 * self.unit)))
-        return f_imgfile, b_imgfile, m_imgfile, a_imgfile
+    def printing_iter(self, font='Helvetica', size=12, style='bold', anchor="ne"):
+        iter_str = "iteration: %d / %d (Total %d)" % (self.iter, len(self.data.keys()) - 1, len(self.data.keys()))
+        font = (font, str(size), style)
+        if hasattr(self, 'iter_text'):
+            self.canvas.delete(self.iter_text)
+        self.iter_text = self.canvas.create_text(self.width * self.unit - 10, 10, fill="black", text=iter_str, font=font, anchor=anchor)
 
     def draw_status(self, status):
         # status = (sim_t, f_dic, m_dic, b_dic, a_dic); _dic: object를 담은 딕셔너리
@@ -159,6 +154,7 @@ class GraphicDisplay(tk.Tk):
                                 'text': self.canvas.create_text(x, y, text=str(a_id))}
 
     def run_entire(self):
+        self.run_reset()
         self.is_moving = 1
         while self.event_cnt <= len(self.data[self.iter]) - 2:
             current_time = self.data[self.iter][self.event_cnt][0]
@@ -195,7 +191,7 @@ class GraphicDisplay(tk.Tk):
         self.event_cnt = 0
         time = self.data[self.iter][self.event_cnt][0]
         self.printing_time(time)
-        # self.printing_iter()
+        self.printing_iter()
         self.draw_status(self.data[self.iter][self.event_cnt])
 
     def run_pause(self):
@@ -217,21 +213,21 @@ class GraphicDisplay(tk.Tk):
         else:
             tk.messagebox.showwarning("Error", "you're at the first iteration")
 
-    def change_speed(self):
+    def change_iter(self):
         win_entry = tk.Toplevel(self)
-        win_entry.title("enter simulation speed")
+        win_entry.title("Change iteration number")
         win_entry.geometry('300x130+550+450')
 
-        def check_ok(event=None):
-            tk.messagebox.showinfo("simulation speed info", "simulation speed changes to %s" % input_num.get())
+        def check_ok(event=None):  # 숫자 입력 후 ok를 눌렀을 때: 메세지 보여주고/입력한 숫자 반영하고/창 끄기
+            tk.messagebox.showinfo("info", "iteration changes to %s" % input_num.get())
             # self.sim_speed = int(input_num.get()) / 10000.0
-            self.sim_speed = 1/float(input_num.get())
+            self.iter = int(input_num.get())
+            self.printing_iter()
             win_entry.destroy()
         input_num = tk.StringVar()
 
         label = tk.Label(win_entry)
-        label.config(text="enter simulation speed \n (sec / 1 simulation time. the larger the faster) "
-                          "\n default: 10000 (10000 times faster)")
+        label.config(text="Enter iteration number \n")
         label.pack(ipadx=5, ipady=5)
         textbox = tk.ttk.Entry(win_entry, width=10, textvariable=input_num)
         textbox.pack(ipadx=5, ipady=5)
@@ -240,11 +236,13 @@ class GraphicDisplay(tk.Tk):
         win_entry.bind("<Return>", check_ok)
         win_entry.mainloop()
 
-    def save_file(self):
-        save_dir = "./gui_pkl/"
-        if not os.path.exists(save_dir):
+    def save_file(self, log_dir):
+        save_dir = log_dir + "gui_pkl/"
+        if not os.path.exists(save_dir):  # 폴더 없으면 만들기
             os.makedirs(save_dir)
-        with open(save_dir + 'simGUI_data.pkl', 'wb') as file:  # james.p 파일을 바이너리 쓰기 모드(wb)로 열기
+        # for old_file in os.scandir(save_dir):  # 파일 삭제하기.
+        #     os.remove(old_file)
+        with open(save_dir + 'simGUIdata.pkl', 'wb') as file:  # xx.pkl 파일을 바이너리 쓰기 모드(wb)로 열기
             pickle.dump(self.data, file)
 
     @staticmethod

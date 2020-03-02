@@ -9,10 +9,10 @@ class Env(object):
     시뮬레이션
     State transition 하는 곳
     """
-    def __init__(self, asset, flight, battery, map_width, map_height):
-        self.asset = asset
-        self.flight = flight  # flight 객체들을 저장하는 딕셔너리
-        self.battery = battery  # battery 객체들을 저장하는 딕셔너리
+    def __init__(self, map_width, map_height):
+        self.asset = {}
+        self.flight = {}  # flight 객체들을 저장하는 딕셔너리
+        self.battery = {}  # battery 객체들을 저장하는 딕셔너리
         self.missile = {}  # missile 객체들을 저장하는 딕셔너리
         self.map_width = map_width
         self.map_height = map_height
@@ -20,34 +20,28 @@ class Env(object):
         self.sim_t = 0  # 현재 시뮬레이션 시간
         self.gui = None
 
-    def run_simulation(self):
+    def run_simulation(self, iteration):
         while not self.check_termination():
             for b in self.battery.values():
                 best_action = self.agent.select_action(self, b)  # 1) 현재 state에서 가장 좋은 action 선택하기
                 self.transit_afteraction_state(best_action)
             if self.gui:
                 if self.gui.event_cnt == 0:
-                    self.gui.data[0][self.gui.event_cnt] = \
+                    self.gui.data[iteration][self.gui.event_cnt] = \
                         (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset), deepcopy(self.battery))
                     self.gui.event_cnt += 1
                 else:
                     if self.sim_t % 10 == 0 or self.gui.lenf != len(self.flight) or self.gui.lenm - len(self.missile) != 0:
-                        self.gui.data[0][self.gui.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset))
+                        self.gui.data[iteration][self.gui.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset))
                         self.gui.event_cnt += 1
                 self.gui.lenf = len(self.flight)
                 self.gui.lenm = len(self.missile)
             self.transit_next_state()  # 2) 1)에서 선택한 action을 수행해서 next_state로 이동하기
             if self.agent.name == 'rl':  # 3) Q 함수의 가중치 업데이트하기
                 self.agent.update_weight()
-        print("simulation ends. print results...")
+        print("simulation iter %d ends. print results..." % iteration)
         if self.gui:
             self.gui.event_cnt = 0
-            self.gui.save_file()
-        """    
-        5) 다 종료되면, 결과 출력하기
-            * 중간중간 결과 저장해서 엑셀/그래프... 저장
-            * 출력 함수들은 dataIO.py 파일에 만들어도 되고...
-        """
 
     def transit_afteraction_state(self, action):
         # action (어떤 포대가 어느 전투기로 "미사일"을 발사했다) 을 반영. 시간 경과 없음
@@ -95,16 +89,6 @@ class Env(object):
         # 위에서 계산 제대로 했는지 확인
         for b in self.battery.values():
             assert b.radar_capa == 2 - len([m for m in self.missile.values() if m.battery == b])
-        # # 프린트 해보기
-        # if self.sim_t % 10 == 0:
-        #     print("sim_t: %.1f, self.flight: " % self.sim_t, [self.flight[i].id for i in self.flight.keys()])
-        #     for f in self.flight.values():
-        #         if f.id == 0:
-        #             print("f%d[%.1f,%.1f]: %.1f," % (f.id, f.x, f.y, 90+f.direction*180/math.pi), end=' ')
-        #             print("")
-        #     for m in self.missile.values():
-        #         print("m%d[from %d to %d]," % (m.id[-1], m.battery.id, m.flight.id), end=' ', flush=True)
-        #     print("")
 
     def check_termination(self):
         """

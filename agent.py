@@ -1,5 +1,7 @@
-from random import random
 from util import calc_object_dist, calc_bf_kill_prob
+import random
+import os
+import pickle
 
 
 def get_actionset(env, b):
@@ -43,14 +45,18 @@ class Greedy(object):
 class RL(object):
     def __init__(self):
         self.name = "rl"
+        self.epsilon = 0.01
         self.num_features = 3
-        self.weight = [random() for _ in range(self.num_features)]  # 초기 가중치 0~1 사이 임의값 지정.
+        self.weight = [random.random() for _ in range(self.num_features)]  # 초기 가중치 0~1 사이 임의값 지정.
 
     def select_action(self, env, battery):
         actionset = get_actionset(env, battery)  # (1) 선택 가능한 action set 불러오기
         best_a = "DoNothing"
         if not actionset:  # 가능한 action 이 없으면
             return best_a
+        elif random.random() < self.epsilon:  # epsilon 확률로 임의의 action 선택
+            actionset.append("DoNothing")
+            return random.choice(actionset)
         else:  # 가능한 action 이 있으면
             # action="아무 것도 안 함=DoNothing" 을 default 로 두고 비교함.
             best_q = self.get_qvalue(env, action="DoNothing")
@@ -126,3 +132,10 @@ class RL(object):
         self.memory에 state, action, reward, next_state, next_action 저장
         :return:
         """
+
+    def save_file(self, log_dir, iteration):
+        save_dir = log_dir
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        with open(save_dir + 'rl_iter%d_performancexxx.pkl' % iteration, 'wb') as file:  # james.p 파일을 바이너리 쓰기 모드(wb)로 열기
+            pickle.dump(self, file)

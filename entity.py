@@ -135,6 +135,11 @@ class Battery(object):
     def init_reload(self):
         self.reload = 3  # 한 번 쏘고 나면 3초 뒤에 다시 쏠 수 있음.
 
+    def initialize(self):
+        self.radar_capa = 2
+        self.reload = 0
+        self.total_launching = 0
+
 
 class Missile(object):
     def __init__(self, launching_battery, target_flight):
