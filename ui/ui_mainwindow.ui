@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>500</width>
+    <height>362</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="acceptDrops">
+   <bool>false</bool>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../img/battery_origin.png</normaloff>../img/battery_origin.png</iconset>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="1" column="0">
+     <spacer name="horizontalSpacer">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="2" column="1">
+     <widget class="QTextBrowser" name="textBrowser">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+        <horstretch>0</horstretch>
+        <verstretch>2</verstretch>
+       </sizepolicy>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="2">
+     <spacer name="horizontalSpacer_2">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="1" column="1">
+     <widget class="QTextBrowser" name="textBrowser_setting">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>500</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu_File">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="actionLoadAgent"/>
+    <addaction name="actionLoadAni"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menu_Config">
+    <property name="title">
+     <string>&amp;Config</string>
+    </property>
+    <addaction name="actionSimulationSetting"/>
+   </widget>
+   <widget class="QMenu" name="menu_Run">
+    <property name="title">
+     <string>&amp;Run</string>
+    </property>
+    <addaction name="actionRun"/>
+    <addaction name="actionStop"/>
+    <addaction name="separator"/>
+    <addaction name="actionPlayAni"/>
+    <addaction name="actionPause"/>
+    <addaction name="actionReset"/>
+    <addaction name="actionMove_Forward"/>
+    <addaction name="actionMove_Backward"/>
+    <addaction name="actionPrevious_iteration"/>
+    <addaction name="actionNext_iteration"/>
+   </widget>
+   <addaction name="menu_File"/>
+   <addaction name="menu_Config"/>
+   <addaction name="menu_Run"/>
+  </widget>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionRun"/>
+   <addaction name="actionStop"/>
+   <addaction name="actionSimulationSetting"/>
+   <addaction name="separator"/>
+   <addaction name="actionLoadAgent"/>
+   <addaction name="actionLoadAni"/>
+   <addaction name="actionExit"/>
+   <addaction name="separator"/>
+   <addaction name="actionPlayAni"/>
+   <addaction name="actionPause"/>
+   <addaction name="actionMove_Backward"/>
+   <addaction name="actionMove_Forward"/>
+   <addaction name="actionReset"/>
+   <addaction name="separator"/>
+   <addaction name="actionPrevious_iteration"/>
+   <addaction name="actionNext_iteration"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionLoadAgent">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/load_agent.png</normaloff>../img/load_agent.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open Agent</string>
+   </property>
+  </action>
+  <action name="actionSaveAgent">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/save.png</normaloff>../img/save.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save Agent</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/exit.png</normaloff>../img/exit.png</iconset>
+   </property>
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionRun">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/run.png</normaloff>../img/run.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Run</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionMove_Forward">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/forward.png</normaloff>../img/forward.png</iconset>
+   </property>
+   <property name="text">
+    <string>Move &amp;Forward</string>
+   </property>
+  </action>
+  <action name="actionMove_Backward">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/backward.png</normaloff>../img/backward.png</iconset>
+   </property>
+   <property name="text">
+    <string>Move &amp;Backward</string>
+   </property>
+  </action>
+  <action name="actionReset">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/reset.png</normaloff>../img/reset.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reset</string>
+   </property>
+  </action>
+  <action name="actionNext_iteration">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/up.png</normaloff>../img/up.png</iconset>
+   </property>
+   <property name="text">
+    <string>Next iteration</string>
+   </property>
+  </action>
+  <action name="actionPrevious_iteration">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/down.png</normaloff>../img/down.png</iconset>
+   </property>
+   <property name="text">
+    <string>Previous iteration</string>
+   </property>
+  </action>
+  <action name="actionPause">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/pause.png</normaloff>../img/pause.png</iconset>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+  </action>
+  <action name="actionSimulationSetting">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/config.png</normaloff>../img/config.png</iconset>
+   </property>
+   <property name="text">
+    <string>Simulation Setting</string>
+   </property>
+  </action>
+  <action name="actionPlayAni">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/play.png</normaloff>../img/play.png</iconset>
+   </property>
+   <property name="text">
+    <string>Play animation</string>
+   </property>
+  </action>
+  <action name="actionLoadAni">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/load_sim.png</normaloff>../img/load_sim.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open Animation</string>
+   </property>
+  </action>
+  <action name="actionSaveAni">
+   <property name="text">
+    <string>Save Animation</string>
+   </property>
+  </action>
+  <action name="actionStop">
+   <property name="icon">
+    <iconset>
+     <normaloff>../img/stop.png</normaloff>../img/stop.png</iconset>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>actionExit</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>249</x>
+     <y>180</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

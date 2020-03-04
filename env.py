@@ -18,30 +18,30 @@ class Env(object):
         self.map_height = map_height
         self.agent = None
         self.sim_t = 0  # 현재 시뮬레이션 시간
-        self.gui = None
+        self.animation = None
 
     def run_simulation(self, iteration):
         while not self.check_termination():
             for b in self.battery.values():
                 best_action = self.agent.select_action(self, b)  # 1) 현재 state에서 가장 좋은 action 선택하기
                 self.transit_afteraction_state(best_action)
-            if self.gui:
-                if self.gui.event_cnt == 0:
-                    self.gui.data[iteration][self.gui.event_cnt] = \
+            if self.animation:
+                if self.animation.event_cnt == 0:
+                    self.animation.data[iteration][self.animation.event_cnt] = \
                         (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset), deepcopy(self.battery))
-                    self.gui.event_cnt += 1
+                    self.animation.event_cnt += 1
                 else:
-                    if self.sim_t % 10 == 0 or self.gui.lenf != len(self.flight) or self.gui.lenm - len(self.missile) != 0:
-                        self.gui.data[iteration][self.gui.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset))
-                        self.gui.event_cnt += 1
-                self.gui.lenf = len(self.flight)
-                self.gui.lenm = len(self.missile)
+                    if self.sim_t % 10 == 0 or self.animation.lenf != len(self.flight) or self.animation.lenm - len(self.missile) != 0:
+                        self.animation.data[iteration][self.animation.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset))
+                        self.animation.event_cnt += 1
+                self.animation.lenf = len(self.flight)
+                self.animation.lenm = len(self.missile)
             self.transit_next_state()  # 2) 1)에서 선택한 action을 수행해서 next_state로 이동하기
             if self.agent.name == 'rl':  # 3) Q 함수의 가중치 업데이트하기
                 self.agent.update_weight()
-        print("simulation iter %d ends. print results..." % iteration)
-        if self.gui:
-            self.gui.event_cnt = 0
+        print("[env.py] simulation iter %d ends. print results..." % iteration)
+        if self.animation:
+            self.animation.event_cnt = 0
 
     def transit_afteraction_state(self, action):
         # action (어떤 포대가 어느 전투기로 "미사일"을 발사했다) 을 반영. 시간 경과 없음

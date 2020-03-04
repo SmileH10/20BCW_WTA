@@ -11,7 +11,7 @@ from util import calc_theta
 
 
 class GraphicDisplay(tk.Tk):
-    def __init__(self, canvas_width, canvas_height, unit_pixel=4, load_file=False):
+    def __init__(self, canvas_width, canvas_height, unit_pixel=4):
         super(GraphicDisplay, self).__init__()
         self.title('WTA Simulation')
         self.width = int(canvas_width)  # 캔버스 가로 크기
@@ -32,10 +32,7 @@ class GraphicDisplay(tk.Tk):
         self.event_cnt = 0
         self.is_moving = 0  # pause 기능을 위한 변수.
 
-        if load_file:
-            self.data = self.load_file()
-        else:
-            self.data = defaultdict(dict)
+        self.data = defaultdict(dict)
 
     def _build_canvas(self):
         canvas = tk.Canvas(self, bg='white',
@@ -243,12 +240,8 @@ class GraphicDisplay(tk.Tk):
         # for old_file in os.scandir(save_dir):  # 파일 삭제하기.
         #     os.remove(old_file)
         with open(save_dir + 'simGUIdata.pkl', 'wb') as file:  # xx.pkl 파일을 바이너리 쓰기 모드(wb)로 열기
-            pickle.dump(self.data, file)
-
-    @staticmethod
-    def load_file():
-        with open('simGUI_data.pkl', 'rb') as file:  # james.p 파일을 바이너리 읽기 모드(rb)로 열기
-            return pickle.load(file)
+            data = {'data': self.data, 'width': self.width, 'height': self.height, 'unit': self.unit}
+            pickle.dump(data, file)
 
 
 if __name__ == '__main__':
