@@ -9,8 +9,8 @@ import os, sys
 
 
 class MainApp(object):
-    def __init__(self, agent_name='Greedy', task='Test', map_width=200.0, map_height=300.0, battery_num=3, flight_num=20, flight_time_interval=30,
-                 termination=('Iteration number', 5), autosave_iter=2):
+    def __init__(self, agent_name='rl', task='Test', map_width=200.0, map_height=300.0, battery_num=3, flight_num=20, flight_time_interval=30,
+                 termination=('Iteration number', 5), autosave_iter=2, animation=False):
         self.gui_framework = None
         self.env = None
         self.agent_name = agent_name
@@ -19,6 +19,7 @@ class MainApp(object):
         self.termination = termination
         assert termination[0].lower() in ('time', 'time(sec)', 'iter', 'iteration number')
         self.autosave_iter = autosave_iter
+        self.animation = animation
         self.map_width, self.map_height = map_width, map_height
         """
         flight 출발좌표: (x, map_height - 10)
@@ -39,13 +40,15 @@ class MainApp(object):
         # else: # agent file loaded
         #     self.env.agent = self.agent_name[:6] = 'loaded'
 
-        self.env.animation = GraphicDisplay(self.map_height, self.map_width, unit_pixel=min(int(1230.0 / self.map_height), int(910.0 / self.map_width)))
+        if self.animation:
+            self.env.animation = GraphicDisplay(self.map_height, self.map_width, unit_pixel=min(int(1230.0 / self.map_height), int(910.0 / self.map_width)))
 
         self.log_dir = "./logs/{}-{}/".format(self.agent_name.lower(), datetime.now().strftime("%m-%d_%H-%M-%S"))
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
         if self.gui_framework:
             self.gui_framework.write_console("log directory: " + self.log_dir, box='textBrowser_setting')
+            self.gui_framework.write_console("log directory: " + self.log_dir)
 
         self.iter = 0
         self.start_time = time()
@@ -61,7 +64,8 @@ class MainApp(object):
             self.env.run_simulation(self.iter)
             # Auto-save
             if self.iter % self.autosave_iter == 0:
-                self.env.animation.save_file(self.log_dir)
+                if self.env.animation:
+                    self.env.animation.save_file(self.log_dir)
                 if self.env.agent.name == 'rl':
                     self.env.agent.save_file(self.log_dir, self.iter)
             # Program에 출력 / 정지 signal 확인
@@ -95,7 +99,10 @@ class MainApp(object):
         """
         if self.gui_framework:
             self.gui_framework.stop_program()
-        self.env.animation.mainloop()
+            self.gui_framework.write_console("Ends running.")
+        if self.env.animation:
+            self.env.animation.mainloop()
+        print("[main.py] Ends")
 
     def init_env(self):
         # battery 생성

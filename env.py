@@ -1,7 +1,24 @@
 from entity import Missile
 import random
-import math
 from copy import deepcopy
+
+
+class FakeEnv(object):
+    def __init__(self, env):
+        self.flight = deepcopy(env.flight)
+        self.battery = deepcopy(env.battery)
+        self.missile = deepcopy(env.missile)
+
+    def transit_afteraction_state(self, actions):
+        # action (어떤 포대가 어느 전투기로 "미사일"을 발사했다) 을 반영. 시간 경과 없음
+        for a in actions:
+            if a != 'DoNothing':
+                action_bid = a[0]
+                action_fid = a[1]
+                new_missile = Missile(launching_battery=self.battery[action_bid], target_flight=self.flight[action_fid])  # 미사일 생성
+                self.missile[new_missile.id] = new_missile  # 미사일 딕셔너리에 추가
+                self.battery[action_bid].init_reload()  # 포대 재장전시간 초기화
+                self.flight[action_fid].surv_prob = self.flight[action_fid].multiply([(1 - m.kill_prob) for m in self.missile.values() if m.flight.id == a[1]])  # 변경된 전투기 생존확률 반영
 
 
 class Env(object):
@@ -22,9 +39,12 @@ class Env(object):
 
     def run_simulation(self, iteration):
         while not self.check_termination():
-            for b in self.battery.values():
-                best_action = self.agent.select_action(self, b)  # 1) 현재 state에서 가장 좋은 action 선택하기
-                self.transit_afteraction_state(best_action)
+            # 1) Agent 가 가장 좋은 액션 선택해서 알려줌
+            actions_taken, best_actions = self.agent.select_action(self)
+            # 2-1) Action (action_taken) 수행 직후 (시간 경과 x) 상태 변화 반영
+            self.transit_afteraction_state(actions_taken)
+
+            # 애니메이션 사용 시, 데이터 저장
             if self.animation:
                 if self.animation.event_cnt == 0:
                     self.animation.data[iteration][self.animation.event_cnt] = \
@@ -36,27 +56,27 @@ class Env(object):
                         self.animation.event_cnt += 1
                 self.animation.lenf = len(self.flight)
                 self.animation.lenm = len(self.missile)
-            self.transit_next_state()  # 2) 1)에서 선택한 action을 수행해서 next_state로 이동하기
-            if self.agent.name == 'rl':  # 3) Q 함수의 가중치 업데이트하기
-                self.agent.update_weight()
+
+            # 2-2) action_taken 수행 후 다음 시점 다음 상태로 이동하기
+            self.transit_next_state()
         print("[env.py] simulation iter %d ends. print results..." % iteration)
         if self.animation:
             self.animation.event_cnt = 0
 
-    def transit_afteraction_state(self, action):
+    def transit_afteraction_state(self, actions):
         # action (어떤 포대가 어느 전투기로 "미사일"을 발사했다) 을 반영. 시간 경과 없음
-        if action != 'DoNothing':
-            action_b = action[0]
-            action_f = action[1]
-            new_missile = Missile(launching_battery=action_b, target_flight=action_f)  # 미사일 생성
-            self.missile[new_missile.id] = new_missile  # 미사일 딕셔너리에 추가
-            action_b.init_reload()  # 포대 재장전시간 초기화
-            action_f.surv_prob = action_f.multiply([(1 - m.kill_prob) for m in self.missile.values() if m.flight == action[1]])  # 변경된 전투기 생존확률 반영
+        for a in actions:
+            if a != 'DoNothing':
+                action_bid = a[0]
+                action_fid = a[1]
+                new_missile = Missile(launching_battery=self.battery[action_bid], target_flight=self.flight[action_fid])  # 미사일 생성
+                self.missile[new_missile.id] = new_missile  # 미사일 딕셔너리에 추가
+                self.battery[action_bid].init_reload()  # 포대 재장전시간 초기화
+                self.flight[action_fid].surv_prob = self.flight[action_fid].multiply([(1 - m.kill_prob) for m in self.missile.values() if m.flight.id == a[1]])  # 변경된 전투기 생존확률 반영
 
     def transit_next_state(self):
         # 시뮬레이션 시간을 1 증가시키기
         self.sim_t += 1
-
         # 전투기/포대/미사일 시간경과하면서 생긴 변화 반영
         for fkey in list(self.flight.keys()):
             self.flight[fkey].transit_route(self)  # 전투기 1칸 이동. 방향 회전할 수도 있음.

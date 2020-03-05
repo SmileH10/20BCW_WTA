@@ -65,7 +65,7 @@ class SimconfigPage(QDialog):
 
     def ok_func(self):
         self.mainapp.agent_name = self.comboBox_agent.currentText()
-        self.mainapp.task = self.comboBox_task.currentText().lower()
+        self.mainapp.task = self.comboBox_task.currentText()
         self.mainapp.b_num = self.spinBox_numb.value()
         self.mainapp.f_num = self.spinBox_numf.value()
         self.mainapp.f_interval = self.doubleSpinBox_finterval.value()
@@ -122,8 +122,6 @@ class MainPage(QMainWindow):
             self, "Message",
             "Are you sure you want to quit? Any unsaved work will be lost.",
             QMessageBox.Close | QMessageBox.Cancel, QMessageBox.Cancel)
-            # QMessageBox.Save | QMessageBox.Close | QMessageBox.Cancel,
-            # QMessageBox.Save)
 
         if reply == QMessageBox.Close:
             self._stopflag = True
@@ -134,10 +132,11 @@ class MainPage(QMainWindow):
 
     def run_program(self):
         worker = Worker(self.mainapp)
-        # Execute
+        # 정지설정 False / run & 설정버튼 비활성화
         self._stopflag = False
         self.actionRun.setEnabled(False)
         self.actionSimulationSetting.setEnabled(False)
+        # Execute
         self.threadpool.start(worker)
         self.write_console("Multithreading with %d of %d threads" % (self.threadpool.activeThreadCount(), self.threadpool.maxThreadCount()))
 
@@ -172,13 +171,6 @@ class MainPage(QMainWindow):
             temp_ani.data = ani_data['data']
             temp_ani.mainloop()
 
-    #
-    # def dataReady(self):
-    #     cursor = self.textBrowser.textCursor()
-    #     cursor.movePosition(cursor.End)
-    #     cursor.insertText(str(self.process.readAll()))
-    #     self.textBrowser.ensureCursorVisible()
-
     def print_setting(self):
         self.textBrowser_setting.setText("[ Current Setting ]\n")
         self.textBrowser_setting.append("Agent: %s" % self.mainapp.agent_name)
@@ -209,5 +201,6 @@ if __name__ == '__main__':
     main_widget = MainPage()
     main_widget.show()
     sys.exit(app.exec_())
+
 
 
