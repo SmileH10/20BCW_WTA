@@ -35,13 +35,14 @@ class Env(object):
         self.map_height = map_height
         self.agent = None
         self.sim_t = 0  # 현재 시뮬레이션 시간
-        self.animation = None
+        self.animation = None  # tkinter class
+        self.animation_autosave = True
         self.num_f_survived = 0
 
-    def run_simulation(self, iteration):
+    def run_simulation(self, iteration, task):
         while not self.check_termination():
             # 1) Agent 가 가장 좋은 액션 선택해서 알려줌
-            actions_taken, best_actions = self.agent.select_action(self)
+            actions_taken, best_actions = self.agent.select_action(self, task)
             # 2-1) Action (action_taken) 수행 직후 (시간 경과 x) 상태 변화 반영
             self.transit_afteraction_state(actions_taken)
 

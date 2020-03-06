@@ -4,7 +4,7 @@
 # from PyQt5.QtCore import QCoreApplication
 
 import sys
-from PyQt5.QtWidgets import QApplication, QDialog, QMainWindow, QDialogButtonBox, QMessageBox, QFileDialog
+from PyQt5.QtWidgets import QApplication, QDialog, QMainWindow, QDialogButtonBox, QMessageBox, QFileDialog, qApp
 from PyQt5.QtCore import QProcess, QThreadPool, QRunnable, QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt5.uic import loadUi
 from PyQt5 import QtGui
@@ -73,7 +73,10 @@ class SimconfigPage(QDialog):
         self.mainapp.animation = self.checkBox_ani.isChecked()
 
     def load_current_setting(self):
-        self.comboBox_agent.setCurrentText(self.mainapp.agent_name)
+        if self.mainapp.agent_name.lower() in ('rl', 'reinforcement learning'):
+            self.comboBox_agent.setCurrentText('Reinforcement Learning')
+        else:
+            self.comboBox_agent.setCurrentText(self.mainapp.agent_name)
         self.comboBox_task.setCurrentText(self.mainapp.task)
         self.spinBox_numb.setProperty("value", self.mainapp.b_num)
         self.spinBox_numf.setProperty("value", self.mainapp.f_num)
@@ -105,6 +108,7 @@ class MainPage(QMainWindow):
         self.threadpool = QThreadPool()
         self._stopflag = False  # main app 정지 신호
         self._exitflag = False  # main app 종료 신호
+        self.EXIT_CODE_REBOOT = -123456789
 
         # 초기 출력
         self.print_setting()  # mainwindow 의 textBrowser_setting 에 현재 설정 출력
@@ -114,8 +118,10 @@ class MainPage(QMainWindow):
         self.actionSimulationSetting.triggered.connect(self.executeConfigPage)  # 페이지(윈도우) 연결
         self.actionRun.triggered.connect(self.run_program)  # Run mainapp
         self.actionStop.triggered.connect(self.stop_program)
-        self.actionSaveAgent.triggered.connect(self.save_agent)
+        # self.actionSaveAgent.triggered.connect(self.save_agent)
+        self.actionLoadAgent.triggered.connect(self.load_agent)
         self.actionLoadAni.triggered.connect(self.load_animation)
+        self.actionReboot.triggered.connect(self.reboot_program)
 
     def closeEvent(self, event):
         reply = QMessageBox.question(
@@ -150,14 +156,33 @@ class MainPage(QMainWindow):
         self.actionRun.setEnabled(True)
         self.actionSimulationSetting.setEnabled(True)
 
-    def save_agent(self):
-        if not self.mainapp.env:
-            QMessageBox.warning(self, "Message", "Any agent/environment isn't loaded.")
-        elif self.mainapp.env.agent.name == 'rl':
-            self.mainapp.env.agent.save_file(self.mainapp.log_dir, self.mainapp.iter)
-            QMessageBox.information(self, "Message", "RL agent file is saved")
-        elif self.mainapp.env.agent.name == 'greedy':
-            QMessageBox.warning(self, "Message", "Greedy agent file CANNOT be saved")
+    def reboot_program(self):
+        reply = QMessageBox.question(
+            self, "Message",
+            "Are you sure you want to reboot? Any unsaved work will be lost.",
+            QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Cancel)
+        if reply == QMessageBox.Ok:
+            self._stopflag = True
+            self._exitflag = True
+            qApp.exit(self.EXIT_CODE_REBOOT)
+
+    # def save_agent(self):
+    #     if not self.mainapp.env:
+    #         QMessageBox.warning(self, "Message", "Any agent/environment isn't loaded.")
+    #     elif self.mainapp.env.agent.name == 'rl':
+    #         self.mainapp.env.agent.save_file(self.mainapp.log_dir, self.mainapp.iter)
+    #         QMessageBox.information(self, "Message", "RL agent file is saved")
+    #     elif self.mainapp.env.agent.name == 'greedy':
+    #         QMessageBox.warning(self, "Message", "Greedy agent file CANNOT be saved")
+
+    def load_agent(self):
+        options = QFileDialog.Options()
+        # filter: "All Files (*)", "Python Files (*.py)", "PKL Files (*.pkl)"
+        fileName, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "", "PKL Files (*.pkl)", options=options)
+        if fileName:
+            QMessageBox.information(self, "Message", "agent file is loaded \n %s" % fileName)
+            self.mainapp.agent_name = fileName
+            self.print_setting()
 
     def load_animation(self):
         options = QFileDialog.Options()
@@ -173,7 +198,12 @@ class MainPage(QMainWindow):
 
     def print_setting(self):
         self.textBrowser_setting.setText("[ Current Setting ]\n")
-        self.textBrowser_setting.append("Agent: %s" % self.mainapp.agent_name)
+        if self.mainapp.agent_name.lower() in ('rl', 'reinforcement learning'):
+            self.textBrowser_setting.append("Agent: Reinforcement Learning")
+        elif self.mainapp.agent_name.lower() == 'greedy':
+            self.textBrowser_setting.append("Agent: %s" % self.mainapp.agent_name)
+        else:
+            self.textBrowser_setting.append("Agent: Loaded %s" % self.mainapp.agent_name)
         self.textBrowser_setting.append("Task: %s" % self.mainapp.task)
         self.textBrowser_setting.append("Num Battery: %d" % self.mainapp.b_num)
         self.textBrowser_setting.append("Num Flight: %d" % self.mainapp.f_num)
@@ -197,10 +227,19 @@ class MainPage(QMainWindow):
 
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    main_widget = MainPage()
-    main_widget.show()
-    sys.exit(app.exec_())
+    currentExitCode = -123456789
+    while currentExitCode == -123456789:
+        app = QApplication(sys.argv)
+        main_widget = MainPage()
+        main_widget.show()
+        currentExitCode = app.exec_()
+        app = None  # delete the QApplication object
+    sys.exit()
+
+    # app = QApplication(sys.argv)
+    # main_widget = MainPage()
+    # main_widget.show()
+    # sys.exit(app.exec_())
 
 
 

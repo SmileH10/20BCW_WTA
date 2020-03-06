@@ -67,7 +67,7 @@ class GraphicDisplay(tk.Tk):
         change_iter_button.configure(width=8, activebackground="#33B5E5")
         canvas.create_window(self.width * self.unit * 0.945, self.height * self.unit + 25, window=change_iter_button)
 
-        canvas.create_text(10, self.height * self.unit,
+        canvas.create_text(10, self.height * self.unit - 5,
                            text="Icons made by Freepick, Eucalyp amd Dave Gandy from www.flaticon.com", font=('Helvetica', '8', 'normal'), anchor="nw")
 
         canvas.pack()

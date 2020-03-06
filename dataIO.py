@@ -1,21 +1,23 @@
 import numpy as np
 
 
-def write_data(log_dir, data, filename, head=False, extension=".csv", list_2D=False):
-    f = open("%s%s" % (log_dir, filename) + extension, "a+")  # file_name.csv 파일 뒤에 이어쓰기. 없으면 만들기
+def write_data(log_dir, data, filename, head=False, extension=".csv", mode='a+', list_type=False):
+    f = open("%s%s" % (log_dir, filename) + extension, mode)  # file_name.csv 파일 뒤에 이어쓰기. 없으면 만들기
     if head:
         f.write("%s\n" % head)
-    if type(data) == list:
-        f = write_list_data(f, data, list_2D)
+    if type(data) in (list, np.ndarray):
+        f = write_list_data(f, data, list_type)
     elif type(data) == dict:
         f = write_dict_data(f, data)
+    elif type(data) == str:
+        f.write("%s\n" % data)
     else:
         print("Can't write data")
     f.close()
 
 
-def write_list_data(f, data, list_2D=False):
-    if list_2D:
+def write_list_data(f, data, list_type=False):
+    if list_type == '2D':
         for i in range(len(data)):
             for j in range(len(data[i])):
                 f.write("%s," % data[i][j])

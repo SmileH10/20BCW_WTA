@@ -37,7 +37,7 @@ class Greedy(object):
         self.name = 'greedy'
 
     @staticmethod
-    def select_action(env):
+    def select_action(env, task='Test'):
         # 가능한 모든 actions 불러오기
         actionset = get_actionset(env)
         # 가장 좋은 행동 선택하기
@@ -77,15 +77,16 @@ class RL(object):
         self.fake_env = None
 
         # 가중치 업데이트할 때 사용
-        self.previous_features, self.previous_reward = None, None
+        self.previous_features, self.previous_reward, self.previous_sim_t = None, None, None
         # self.memory = pd.DataFrame(data=[], columns=['X', 'y'])
         self.memory = {'X': [], 'y': []}
         self.memory_capa = 10000
 
         # 결과 출력할 때 사용
         self.cumulative_rewards = 0.0
+        self.memory_for_record = np.array([[]])
 
-    def select_action(self, env):
+    def select_action(self, env, task):
         # 가능한 모든 actions 불러오기
         actionset = get_actionset(env)
 
@@ -115,7 +116,8 @@ class RL(object):
                     reward = surv_probs - sum([f.surv_prob for f in self.fake_env.flight.values()])  # 보상 = 생존확률 감소량 = 파괴확률 증가량 (현재 살아있는 전투기에 대해서만)
             self.cumulative_rewards += reward
             # 가중치 업데이트
-            self.update_weight(best_q, best_features, reward)
+            if task.lower() == 'train':
+                self.update_weight(best_q, best_features, reward, env.sim_t)
         # epsilon 확률로 임의의 action 선택
         if random.random() < self.epsilon:
             what_really_do = random.choice(actionset)
@@ -124,23 +126,28 @@ class RL(object):
 
         return what_really_do, best_a
 
-    def update_weight(self, best_q, best_features, reward):
+    def update_weight(self, best_q, best_features, reward, sim_t):
         """
         self.previous_features: (S[t], a[t])
         self.previous_reward: r[t]
         best_q: max_a[t+1]( Q(S[t+1], a[t+1]) )
         Q(S[t], a[t]) = r[t] + max_a[t+1]( Q(S[t+1], a[t+1]) ) 가 되도록 가중치 업데이트.
+        Q(S[t], a[t]) = linear model (S[t], a[t]) = lm.predict(self.previous_features)
         """
         # x, y를 메모리에 저장
         # if not self.memory.empty:
         if self.previous_reward != None:
             x = self.previous_features
-            y = self.previous_reward + best_q
-            self.memory['X'].append(x)  #  self.memory.append(pd.Series([x, y]))
+            y = self.previous_reward + self.gamma ** (sim_t - self.previous_sim_t) * best_q
+            self.memory['X'].append(x)  # self.memory.append(pd.Series([x, y]))
             self.memory['y'].append(y)
+            if self.memory_for_record.size != 0:
+                self.memory_for_record = np.concatenate((self.memory_for_record, [np.append(x, [y])]), axis=0)
+            else:
+                self.memory_for_record = np.array([np.append(x, [y])])
             # if self.memory.shape[0] > self.memory_capa:
             if len(self.memory['y']) > self.memory_capa:
-                #     del   self.memory.iloc[0]  # 첫 번째 row 지우기
+                # del   self.memory.iloc[0]  # 첫 번째 row 지우기
                 del self.memory['X'][0]
                 del self.memory['y'][0]
 
@@ -150,6 +157,7 @@ class RL(object):
             # self.lm.fit([[1, 3, 4, 12], [1, 3, 4, 12], [1, 3, 4, 12], [1, 3, 4, 12]], [5, 1, 5, 6])
         self.previous_features = best_features
         self.previous_reward = reward
+        self.previous_sim_t = sim_t
 
     def get_qvalue(self, features):
         """
@@ -172,11 +180,17 @@ class RL(object):
         # features[1] 계산식 넣기
         features[2] = 0
         # ...
+        assert self.num_features == len(features)
         return features
 
     def save_file(self, log_dir, iteration):
         save_dir = log_dir
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        with open(save_dir + 'rl_iter%d_performancexxx.pkl' % iteration, 'wb') as file:  # james.p 파일을 바이너리 쓰기 모드(wb)로 열기
+        with open(save_dir + 'rl_iter%d.pkl' % iteration, 'wb') as file:  # james.p 파일을 바이너리 쓰기 모드(wb)로 열기
             pickle.dump(self, file)
+
+    def initialize(self):
+        del self.memory_for_record
+        self.memory_for_record = np.array([[]])
+        self.cumulative_rewards = 0.0
