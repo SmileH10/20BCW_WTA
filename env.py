@@ -36,6 +36,7 @@ class Env(object):
         self.agent = None
         self.sim_t = 0  # 현재 시뮬레이션 시간
         self.animation = None
+        self.num_f_survived = 0
 
     def run_simulation(self, iteration):
         while not self.check_termination():
@@ -59,7 +60,7 @@ class Env(object):
 
             # 2-2) action_taken 수행 후 다음 시점 다음 상태로 이동하기
             self.transit_next_state()
-        print("[env.py] simulation iter %d ends. print results..." % iteration)
+
         if self.animation:
             self.animation.event_cnt = 0
 
@@ -83,6 +84,7 @@ class Env(object):
             if self.flight[fkey].kill_asset:
                 del(self.asset[self.flight[fkey].target_asset.id])
                 del(self.flight[fkey])
+                self.num_f_survived += 1  # 결과출력용
         for b in self.battery.values():
             b.transit_reload()  # 포대 재장전 시간 -1
         for m in self.missile.values():

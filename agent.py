@@ -82,6 +82,9 @@ class RL(object):
         self.memory = {'X': [], 'y': []}
         self.memory_capa = 10000
 
+        # 결과 출력할 때 사용
+        self.cumulative_rewards = 0.0
+
     def select_action(self, env):
         # 가능한 모든 actions 불러오기
         actionset = get_actionset(env)
@@ -110,6 +113,7 @@ class RL(object):
                     best_q = temp_q
                     best_features = temp_features
                     reward = surv_probs - sum([f.surv_prob for f in self.fake_env.flight.values()])  # 보상 = 생존확률 감소량 = 파괴확률 증가량 (현재 살아있는 전투기에 대해서만)
+            self.cumulative_rewards += reward
             # 가중치 업데이트
             self.update_weight(best_q, best_features, reward)
         # epsilon 확률로 임의의 action 선택

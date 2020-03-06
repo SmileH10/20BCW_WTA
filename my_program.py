@@ -57,8 +57,6 @@ class SimconfigPage(QDialog):
     def check_task_feasibility(self):
         if self.comboBox_agent.currentText().lower() == 'greedy':
             self.comboBox_task.setCurrentText('Test')
-            # self.label_task.setText('Test')
-            # self.label_task.setText('Test')
             self.comboBox_task.setEnabled(False)
         else:
             self.comboBox_task.setEnabled(True)
@@ -72,6 +70,7 @@ class SimconfigPage(QDialog):
         self.mainapp.map_width = self.doubleSpinBox_width.value()
         self.mainapp.termination = (self.comboBox_termtype.currentText(), self.spinBox_termcriteria.value())
         self.mainapp.autosave_iter = self.spinBox_autosave.value()
+        self.mainapp.animation = self.checkBox_ani.isChecked()
 
     def load_current_setting(self):
         self.comboBox_agent.setCurrentText(self.mainapp.agent_name)
@@ -83,6 +82,7 @@ class SimconfigPage(QDialog):
         self.spinBox_termcriteria.setProperty("value", self.mainapp.termination[1])
         self.comboBox_termtype.setCurrentText(self.mainapp.termination[0])
         self.spinBox_autosave.setProperty("value", self.mainapp.autosave_iter)
+        self.checkBox_ani.setChecked(self.mainapp.animation)
 
     def print_current_setting(self):
         self.label_agent.setText(str(self.comboBox_agent.currentText()))

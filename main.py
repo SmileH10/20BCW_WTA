@@ -2,6 +2,7 @@ from env import Env
 from agent import RL, Greedy
 from entity import Asset, Flight, Battery
 from animation import GraphicDisplay
+from dataIO import write_data
 from time import time
 import random
 from datetime import datetime
@@ -10,7 +11,7 @@ import os, sys
 
 class MainApp(object):
     def __init__(self, agent_name='rl', task='Test', map_width=200.0, map_height=300.0, battery_num=3, flight_num=20, flight_time_interval=30,
-                 termination=('Iteration number', 5), autosave_iter=2, animation=False):
+                 termination=('Iteration number', 5), autosave_iter=2, animation=True):
         self.gui_framework = None
         self.env = None
         self.agent_name = agent_name
@@ -68,19 +69,51 @@ class MainApp(object):
                     self.env.animation.save_file(self.log_dir)
                 if self.env.agent.name == 'rl':
                     self.env.agent.save_file(self.log_dir, self.iter)
-            # Program에 출력 / 정지 signal 확인
+            # 결과 출력 코드
+            # # Program에 출력
+            temp_time_h = (self.termination[1] - time() + self.start_time) / (60.0 * 60)
+            temp_time_m = (self.termination[1] - time() + self.start_time) % (60.0 * 60) / 60.0
+            temp_time_s = (self.termination[1] - time() + self.start_time) % 60.0
+            if self.termination[0][:4].lower() == 'time':
+                if self.env.agent.name == 'rl':
+                    txt = "simulation iter %d ends. %dh:%dm:%.0fs left. num_f_survived: %d, cum_rewards: %.2f"\
+                          % (self.iter, temp_time_h, temp_time_m, temp_time_s, self.env.num_f_survived, self.env.agent.cumulative_rewards)
+                else:
+                    txt = "simulation iter %d ends. %dh:%dm:%.0fs left. num_f_survived: %d" \
+                          % (self.iter, temp_time_h, temp_time_m, temp_time_s, self.env.num_f_survived)
+            elif self.termination[0][:4].lower() == 'iter':
+                if self.env.agent.name == 'rl':
+                    txt = "simulation iter %d of %d ends. num_f_survived: %d, cum_rewards: %.2f"\
+                          % (self.iter, self.termination[1] - 1, self.env.num_f_survived, self.env.agent.cumulative_rewards)
+                else:
+                    txt = "simulation iter %d of %d ends. num_f_survived: %d" % (self.iter, self.termination[1] - 1, self.env.num_f_survived)
+            print(txt)
             if self.gui_framework:
-                temp_time_h = (self.termination[1] - time() + self.start_time) / (60.0 * 60)
-                temp_time_m = (self.termination[1] - time() + self.start_time) % (60.0 * 60) / 60.0
-                temp_time_s = (self.termination[1] - time() + self.start_time) % 60.0
-                if self.termination[0][:4].lower() == 'time':
-                    self.gui_framework.write_console("simulation iter %d ends. %dh:%dm:%.0fs left. print results..." % (self.iter, temp_time_h, temp_time_m, temp_time_s))
-                elif self.termination[0][:4].lower() == 'iter':
-                    self.gui_framework.write_console("simulation iter %d of %d ends. print results..." % (self.iter, self.termination[1] - 1))
+                self.gui_framework.write_console(txt)
+            # # 파일로 저장
+            filename = "results"
+            extension = ".csv"
+            if self.env.agent.name == 'rl':
+                if not os.path.isfile(self.log_dir + filename + extension):
+                    headstr = 'Iteration, num_f_survived, total rewards'
+                else:
+                    headstr = False
+                tempdic_rawdata = {"%d" % self.iter: "%d, %.2f" % (self.env.num_f_survived, self.env.agent.cumulative_rewards)}
+                self.env.agent.cumulative_rewards = 0.0  # 초기화
+            else:
+                if not os.path.isfile(self.log_dir + filename + extension):
+                    headstr = 'Iteration, num_f_survived'
+                else:
+                    headstr = False
+                tempdic_rawdata = {"%d" % self.iter: "%d" % self.env.num_f_survived}
+            write_data(self.log_dir, data=tempdic_rawdata, filename=filename, head=headstr, extension=extension)
+            # # 정지 signal 확인
+            if self.gui_framework:
                 if self.gui_framework._stopflag:
                     if self.gui_framework._exitflag:
                         sys.exit()
                     break
+
             # 종료조건 확인
             if self.termination[0][:4].lower() == 'time':
                 if time() - self.start_time >= self.termination[1]:
@@ -90,13 +123,6 @@ class MainApp(object):
                     break
             # iter 숫자 증가
             self.iter += 1
-        """
-        결과 출력 코드 작성해야 함.
-        self.print_results(self.log_dir)
-        5) 다 종료되면, 결과 출력하기
-            * 중간중간 결과 저장해서 엑셀/그래프... 저장
-            * 출력 함수들은 dataIO.py 파일에 만들어도 되고...
-        """
         if self.gui_framework:
             self.gui_framework.stop_program()
             self.gui_framework.write_console("Ends running.")
@@ -118,6 +144,7 @@ class MainApp(object):
         매 iteration 마다 sim_t 초기화 / battery 초기화 / asset 새로 생성 / flight 새로 생성
         """
         self.env.sim_t = 0
+        self.env.num_f_survived = 0
         if self.task.lower() == 'test':
             random.seed(self.iter + 910814)
         elif self.task.lower() == 'train':
