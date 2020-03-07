@@ -204,8 +204,7 @@ class MainApp(object):
 if __name__ == '__main__':
     my_main = MainApp()
     my_main.run_main()
-    my_main.agent_name = 'Greedy'
-    my_main.run_main()
+
     # # # Load animation
     # # ani = GraphicDisplay(map_height, map_width, unit_pixel=5, load_file=True)
     # # ani.mainloop()

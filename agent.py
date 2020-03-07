@@ -7,6 +7,12 @@ import random
 import os
 import pickle
 import itertools
+# pyinstaller import error 때문에 추가
+import sklearn.utils._cython_blas
+import sklearn.neighbors.typedefs
+import sklearn.neighbors.quad_tree
+import sklearn.tree
+import sklearn.tree._utils
 
 
 def get_actionset(env):
