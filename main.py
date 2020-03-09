@@ -1,10 +1,8 @@
 from env import Env
 from agent import RL, Greedy
-from entity import Asset, Flight, Battery
 from animation import GraphicDisplay
 from dataIO import write_data
 from time import time
-import random
 from datetime import datetime
 import pickle
 import os, sys
@@ -16,6 +14,7 @@ class MainApp(object):
         self.gui_framework = None
         self.env = None
         self.agent_name = agent_name
+        self.agent = None
         self.task = task
         assert self.task.lower() in ('train', 'test')
         self.termination = termination
@@ -30,43 +29,59 @@ class MainApp(object):
         self.f_interval = flight_time_interval  # 첫 출발 flight ~ 마지막 출발 flight 의 시간 간격 (unit_time)
 
     def initialize(self):
-        self.env = Env(self.map_width, self.map_height)
-        # self.log_dir = "./logs/{}-{}/".format(self.agent_name.lower(), datetime.now().strftime("%m-%d_%H-%M-%S"))
+        # env 만들기
+        self.env = Env(self.map_width, self.map_height, self.b_num, self.f_num, self.f_interval)
+        # agent 만들기
+        # # self.log_dir = "./logs/{}-{}/".format(self.agent_name.lower(), datetime.now().strftime("%m-%d_%H-%M-%S"))
         if self.agent_name.lower() == 'greedy':
-            self.env.agent = Greedy()
+            self.agent = Greedy()
             self.log_dir = "./logs/greedy-{}/".format(datetime.now().strftime("%m-%d_%H-%M-%S"))
         elif self.agent_name.lower() in ('rl', 'reinforcement learning'):
-            self.env.agent = RL()
+            self.agent = RL()
             self.log_dir = "./logs/rl-{}/".format(datetime.now().strftime("%m-%d_%H-%M-%S"))
         else:  # agent file loaded
             with open(self.agent_name, 'rb') as file:  # james.p 파일을 바이너리 읽기 모드(rb)로 열기
-                self.env.agent = pickle.load(file)
+                self.agent = pickle.load(file)
             loaded_filename = self.agent_name.split('/')[-2] + '_' + self.agent_name.split('/')[-1].split('.')[0]
             self.log_dir = "./logs/{}-{}/".format(loaded_filename, datetime.now().strftime("%m-%d_%H-%M-%S"))
-
-        if self.animation:
-            self.env.animation = GraphicDisplay(self.map_height, self.map_width, unit_pixel=min(int(1230.0 / self.map_height), int(910.0 / self.map_width)))
-
+        # 저장경로 만들기
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
         if self.gui_framework:
             self.gui_framework.write_console("log directory: " + self.log_dir, box='textBrowser_setting')
             self.gui_framework.write_console("log directory: " + self.log_dir)
-
+        # 애니메이션 만들기
+        if self.animation:
+            self.animation = GraphicDisplay(self.map_height, self.map_width,
+                                            unit_pixel=min(int(1230.0 / self.map_height), int(910.0 / self.map_width)))
+        # 기타 설정 초기화하기
         self.iter = 0
         self.start_time = time()
-        self.init_env()
-        self.init_env_iter()
+        self.env.init_env()
 
     def run_main(self):
         self.initialize()
         while True:
             # 초기화
-            self.init_env_iter()
-            # Run 시뮬레이션
-            self.env.run_simulation(self.iter, self.task)
+            self.env.init_env_iter(self.task, self.iter)
+            if self.agent.name == 'rl':
+                self.agent.init_records()
+            # Run 시뮬레이션 (1 scenario)
+            while not self.env.check_termination():
+                # # 1) Agent 가 가장 좋은 액션 선택해서 알려줌
+                actions_taken, _ = self.agent.select_action(self.env, self.task)
+                # # 2-1) Action (action_taken) 수행 직후 (시간 경과 x) 상태 변화 반영
+                self.env.transit_afteraction_state(actions_taken)
+                # 애니메이션 사용 시, 데이터 저장
+                if self.animation:
+                    self.animation.save_stepdata(self, self.env)
+                # 2-2) action_taken 수행 후 다음 시점 다음 상태로 이동하기
+                self.env.transit_next_state()
+            if self.animation:
+                self.animation.event_cnt = 0
             # 결과 저장 및 출력
             self.save_and_print()
+            # 전체 실험 종료조건 확인
             if self.stop_signal():
                 break
             # iter 숫자 증가
@@ -74,18 +89,18 @@ class MainApp(object):
         if self.gui_framework:
             self.gui_framework.stop_program()
             self.gui_framework.write_console("Ends running.")
-        if self.env.animation:
-            self.env.animation.mainloop()
+        if self.animation:
+            self.animation.mainloop()
         print("[main.py] Ends")
 
     def save_and_print(self):
         # Auto-save
         if self.iter % self.autosave_iter == 0:
-            if self.env.animation:
-                self.env.animation.save_file(self.log_dir)
-            if self.env.agent.name == 'rl':
+            if self.animation:
+                self.animation.save_file(self.log_dir)
+            if self.agent.name == 'rl':
                 # 에이전트 파일 저장
-                self.env.agent.save_file(self.log_dir, self.iter)
+                self.agent.save_file(self.log_dir, self.iter)
 
         # 결과 출력 코드
         # # Program에 출력
@@ -93,16 +108,16 @@ class MainApp(object):
         temp_time_m = (self.termination[1] - time() + self.start_time) % (60.0 * 60) / 60.0
         temp_time_s = (self.termination[1] - time() + self.start_time) % 60.0
         if self.termination[0][:4].lower() == 'time':
-            if self.env.agent.name == 'rl':
+            if self.agent.name == 'rl':
                 txt = "simulation iter %d ends. %dh:%dm:%.0fs left. num_f_survived: %d, cum_rewards: %.2f"\
-                      % (self.iter, temp_time_h, temp_time_m, temp_time_s, self.env.num_f_survived, self.env.agent.cumulative_rewards)
+                      % (self.iter, temp_time_h, temp_time_m, temp_time_s, self.env.num_f_survived, self.agent.cumulative_rewards)
             else:
                 txt = "simulation iter %d ends. %dh:%dm:%.0fs left. num_f_survived: %d" \
                       % (self.iter, temp_time_h, temp_time_m, temp_time_s, self.env.num_f_survived)
         elif self.termination[0][:4].lower() == 'iter':
-            if self.env.agent.name == 'rl':
+            if self.agent.name == 'rl':
                 txt = "simulation iter %d of %d ends. num_f_survived: %d, cum_rewards: %.2f"\
-                      % (self.iter, self.termination[1] - 1, self.env.num_f_survived, self.env.agent.cumulative_rewards)
+                      % (self.iter, self.termination[1] - 1, self.env.num_f_survived, self.agent.cumulative_rewards)
             else:
                 txt = "simulation iter %d of %d ends. num_f_survived: %d" % (self.iter, self.termination[1] - 1, self.env.num_f_survived)
         print(txt)
@@ -111,12 +126,12 @@ class MainApp(object):
         # # 파일로 저장
         filename = "results"
         extension = ".csv"
-        if self.env.agent.name == 'rl':
+        if self.agent.name == 'rl':
             if not os.path.isfile(self.log_dir + filename + extension):
                 headstr = 'Iteration, num_f_survived, total rewards'
             else:
                 headstr = False
-            tempdic_rawdata = {"%d" % self.iter: "%d, %.2f" % (self.env.num_f_survived, self.env.agent.cumulative_rewards)}
+            tempdic_rawdata = {"%d" % self.iter: "%d, %.2f" % (self.env.num_f_survived, self.agent.cumulative_rewards)}
         else:
             if not os.path.isfile(self.log_dir + filename + extension):
                 headstr = 'Iteration, num_f_survived'
@@ -125,14 +140,13 @@ class MainApp(object):
             tempdic_rawdata = {"%d" % self.iter: "%d" % self.env.num_f_survived}
         write_data(self.log_dir, data=tempdic_rawdata, filename=filename, head=headstr, extension=extension)
         # # lm 데이터를 파일로 저장
-        if self.env.agent.name == 'rl':
+        if self.agent.name == 'rl':
             filename = "LinearModel_data"
             if not os.path.isfile(self.log_dir + filename + extension):
-                headstr = ', '.join('feature%d' % i for i in range(self.env.agent.num_features)) + ', Y(=Q)'
+                headstr = ', '.join('feature%d' % i for i in range(self.agent.num_features)) + ', Y(=Q)'
             else:
                 headstr = False
-            write_data(self.log_dir, data=self.env.agent.memory_for_record, filename=filename, head=headstr, list_type='2D')
-            self.env.agent.initialize()
+            write_data(self.log_dir, data=self.agent.memory_for_record, filename=filename, head=headstr, list_type='2D')
 
     def stop_signal(self):
         # # 정지 signal 확인
@@ -149,56 +163,6 @@ class MainApp(object):
             if self.iter >= self.termination[1] - 1:
                 return True
         return False
-
-    def init_env(self):
-        # battery 생성
-        self.battery = {}
-        temp_x = self.map_width / 2 / self.b_num
-        for b in range(self.b_num):
-            # 일단 위치는 균등하게 퍼트려놓음.
-            self.battery[b] = Battery(b_id=b, x=temp_x, y=100)
-            temp_x += self.map_width / self.b_num
-
-    def init_env_iter(self):
-        """
-        매 iteration 마다 sim_t 초기화 / battery 초기화 / asset 새로 생성 / flight 새로 생성
-        """
-        self.env.sim_t = 0
-        self.env.num_f_survived = 0
-        if self.task.lower() == 'test':
-            random.seed(self.iter + 910814)
-        # elif self.task.lower() == 'train':  # 로딩한 agent 이어서 학습할 때 예전 꺼 그대로 반복하지 않도록...
-        #     random.seed(self.iter)
-
-        """
-        flight 출발좌표: (x, map_height - 10)
-        battery 위치좌표: (x, 사거리 * 2.5)
-        asset 위치좌표: (x, 5)
-        """
-
-        for b in range(self.b_num):
-            self.battery[b].initialize()
-
-        # asset 생성
-        asset_num = self.f_num
-        temp_x = [random.random() for _ in range(asset_num)]
-        temp_x.sort()
-        for a in range(asset_num):
-            self.asset[a] = Asset(a_id=a, x=temp_x[a] * self.map_width, y=5, value=1)
-
-        # flight 생성
-        temp_x = [random.random() for _ in range(self.f_num)]
-        temp_x.sort()
-        for f in range(self.f_num):
-            # 일단 출발위치는 uniform 분포, 목표자산 아무거나 설정
-            self.flight[f] = Flight(f_id=f, init_x=temp_x[f] * self.map_width, init_y=self.map_height - 10, target_asset=self.asset[f],
-                                    start_t=random.randint(0, self.f_interval))
-
-        # env 에 반영
-        del self.env.flight, self.env.battery, self.env.asset
-        self.env.flight = self.flight
-        self.env.asset = self.asset
-        self.env.battery = self.battery
 
 
 if __name__ == '__main__':

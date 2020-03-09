@@ -238,6 +238,11 @@
          <string>Reinforcement Learning</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Loaded</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item row="2" column="2">

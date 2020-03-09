@@ -196,7 +196,7 @@ class RL(object):
         with open(save_dir + 'rl_iter%d.pkl' % iteration, 'wb') as file:  # james.p 파일을 바이너리 쓰기 모드(wb)로 열기
             pickle.dump(self, file)
 
-    def initialize(self):
+    def init_records(self):
         del self.memory_for_record
         self.memory_for_record = np.array([[]])
         self.cumulative_rewards = 0.0

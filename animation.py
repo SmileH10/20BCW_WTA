@@ -4,6 +4,7 @@ import tkinter.ttk
 from PIL import ImageTk, Image
 from collections import defaultdict
 from time import sleep
+from copy import deepcopy
 import math  # pi 사용
 import pickle
 import os
@@ -242,6 +243,18 @@ class GraphicDisplay(tk.Tk):
         with open(save_dir + 'simGUIdata.pkl', 'wb') as file:  # xx.pkl 파일을 바이너리 쓰기 모드(wb)로 열기
             data = {'data': self.data, 'width': self.width, 'height': self.height, 'unit': self.unit}
             pickle.dump(data, file)
+
+    def save_stepdata(self, mainapp, env):
+        if self.event_cnt == 0:
+            self.data[mainapp.iter][self.event_cnt] = \
+                (env.sim_t, deepcopy(env.flight), deepcopy(env.missile), deepcopy(env.asset), deepcopy(env.battery))
+            self.event_cnt += 1
+        else:
+            if env.sim_t % 10 == 0 or self.lenf != len(env.flight) or self.lenm - len(env.missile) != 0:
+                self.data[mainapp.iter][self.event_cnt] = (env.sim_t, deepcopy(env.flight), deepcopy(env.missile), deepcopy(env.asset))
+                self.event_cnt += 1
+        self.lenf = len(env.flight)
+        self.lenm = len(env.missile)
 
 
 if __name__ == '__main__':

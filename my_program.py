@@ -62,7 +62,10 @@ class SimconfigPage(QDialog):
             self.comboBox_task.setEnabled(True)
 
     def ok_func(self):
-        self.mainapp.agent_name = self.comboBox_agent.currentText()
+        if self.comboBox_agent.currentText() == 'Loaded':
+            pass
+        else:
+            self.mainapp.agent_name = self.comboBox_agent.currentText()
         self.mainapp.task = self.comboBox_task.currentText()
         self.mainapp.b_num = self.spinBox_numb.value()
         self.mainapp.f_num = self.spinBox_numf.value()
@@ -75,8 +78,10 @@ class SimconfigPage(QDialog):
     def load_current_setting(self):
         if self.mainapp.agent_name.lower() in ('rl', 'reinforcement learning'):
             self.comboBox_agent.setCurrentText('Reinforcement Learning')
+        elif self.mainapp.agent_name.lower() == 'greedy':
+            self.comboBox_agent.setCurrentText('Greedy')
         else:
-            self.comboBox_agent.setCurrentText(self.mainapp.agent_name)
+            self.comboBox_agent.setCurrentText('Loaded')
         self.comboBox_task.setCurrentText(self.mainapp.task)
         self.spinBox_numb.setProperty("value", self.mainapp.b_num)
         self.spinBox_numf.setProperty("value", self.mainapp.f_num)
@@ -169,10 +174,10 @@ class MainPage(QMainWindow):
     # def save_agent(self):
     #     if not self.mainapp.env:
     #         QMessageBox.warning(self, "Message", "Any agent/environment isn't loaded.")
-    #     elif self.mainapp.env.agent.name == 'rl':
-    #         self.mainapp.env.agent.save_file(self.mainapp.log_dir, self.mainapp.iter)
+    #     elif self.mainapp.agent.name == 'rl':
+    #         self.mainapp.agent.save_file(self.mainapp.log_dir, self.mainapp.iter)
     #         QMessageBox.information(self, "Message", "RL agent file is saved")
-    #     elif self.mainapp.env.agent.name == 'greedy':
+    #     elif self.mainapp.agent.name == 'greedy':
     #         QMessageBox.warning(self, "Message", "Greedy agent file CANNOT be saved")
 
     def load_agent(self):

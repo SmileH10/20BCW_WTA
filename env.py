@@ -1,4 +1,4 @@
-from entity import Missile
+from entity import *
 import random
 from copy import deepcopy
 
@@ -26,44 +26,68 @@ class Env(object):
     시뮬레이션
     State transition 하는 곳
     """
-    def __init__(self, map_width, map_height):
+    def __init__(self, map_width, map_height, battery_num, flight_num, flight_time_interval):
         self.asset = {}
         self.flight = {}  # flight 객체들을 저장하는 딕셔너리
         self.battery = {}  # battery 객체들을 저장하는 딕셔너리
         self.missile = {}  # missile 객체들을 저장하는 딕셔너리
+
         self.map_width = map_width
         self.map_height = map_height
-        self.agent = None
+        self.b_num = battery_num
+        self.f_num = flight_num
+        self.f_interval = flight_time_interval  # 첫 출발 flight ~ 마지막 출발 flight 의 시간 간격 (unit_time)
+
         self.sim_t = 0  # 현재 시뮬레이션 시간
         self.animation = None  # tkinter class
         self.animation_autosave = True
         self.num_f_survived = 0
 
-    def run_simulation(self, iteration, task):
-        while not self.check_termination():
-            # 1) Agent 가 가장 좋은 액션 선택해서 알려줌
-            actions_taken, best_actions = self.agent.select_action(self, task)
-            # 2-1) Action (action_taken) 수행 직후 (시간 경과 x) 상태 변화 반영
-            self.transit_afteraction_state(actions_taken)
+    def init_env(self):
+        # battery 생성
+        self.battery = {}
+        temp_x = self.map_width / 2 / self.b_num
+        for b in range(self.b_num):
+            # 일단 위치는 균등하게 퍼트려놓음.
+            self.battery[b] = Battery(b_id=b, x=temp_x, y=100)
+            temp_x += self.map_width / self.b_num
 
-            # 애니메이션 사용 시, 데이터 저장
-            if self.animation:
-                if self.animation.event_cnt == 0:
-                    self.animation.data[iteration][self.animation.event_cnt] = \
-                        (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset), deepcopy(self.battery))
-                    self.animation.event_cnt += 1
-                else:
-                    if self.sim_t % 10 == 0 or self.animation.lenf != len(self.flight) or self.animation.lenm - len(self.missile) != 0:
-                        self.animation.data[iteration][self.animation.event_cnt] = (self.sim_t, deepcopy(self.flight), deepcopy(self.missile), deepcopy(self.asset))
-                        self.animation.event_cnt += 1
-                self.animation.lenf = len(self.flight)
-                self.animation.lenm = len(self.missile)
+    def init_env_iter(self, task, iter):
+        """
+        매 iteration 마다 sim_t 초기화 / battery 초기화 / asset 새로 생성 / flight 새로 생성
+        """
+        self.sim_t = 0
+        self.num_f_survived = 0
+        if task.lower() == 'test':
+            random.seed(iter + 910814)
+        # elif self.task.lower() == 'train':  # 로딩한 agent 이어서 학습할 때 예전 꺼 그대로 반복하지 않도록...
+        #     random.seed(self.iter)
 
-            # 2-2) action_taken 수행 후 다음 시점 다음 상태로 이동하기
-            self.transit_next_state()
+        """
+        flight 출발좌표: (x, map_height - 10)
+        battery 위치좌표: (x, 사거리 * 2.5)
+        asset 위치좌표: (x, 5)
+        """
+        del self.flight, self.asset
+        self.asset = {}
+        self.flight = {}
+        for b in range(self.b_num):
+            self.battery[b].initialize()
 
-        if self.animation:
-            self.animation.event_cnt = 0
+        # asset 생성
+        asset_num = self.f_num
+        temp_x = [random.random() for _ in range(asset_num)]
+        temp_x.sort()
+        for a in range(asset_num):
+            self.asset[a] = Asset(a_id=a, x=temp_x[a] * self.map_width, y=5, value=1)
+
+        # flight 생성
+        temp_x = [random.random() for _ in range(self.f_num)]
+        temp_x.sort()
+        for f in range(self.f_num):
+            # 일단 출발위치는 uniform 분포, 목표자산 아무거나 설정
+            self.flight[f] = Flight(f_id=f, init_x=temp_x[f] * self.map_width, init_y=self.map_height - 10, target_asset=self.asset[f],
+                                    start_t=random.randint(0, self.f_interval))
 
     def transit_afteraction_state(self, actions):
         # action (어떤 포대가 어느 전투기로 "미사일"을 발사했다) 을 반영. 시간 경과 없음
