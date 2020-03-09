@@ -9,8 +9,8 @@ import os, sys
 
 
 class MainApp(object):
-    def __init__(self, agent_name='rl', task='Test', map_width=200.0, map_height=300.0, battery_num=3, flight_num=20, flight_time_interval=30,
-                 termination=('Iteration number', 5), autosave_iter=2, animation=True):
+    def __init__(self, agent_name='rl', task='Train', map_width=200.0, map_height=300.0, battery_num=3, flight_num=20, flight_time_interval=50,
+                 termination=('Iteration number', 10000), autosave_iter=50, animation=True):
         self.gui_framework = None
         self.env = None
         self.agent_name = agent_name
@@ -57,6 +57,7 @@ class MainApp(object):
         # 기타 설정 초기화하기
         self.iter = 0
         self.start_time = time()
+        self.iter_start_time = time()
         self.env.init_env()
 
     def run_main(self):
@@ -103,26 +104,6 @@ class MainApp(object):
                 self.agent.save_file(self.log_dir, self.iter)
 
         # 결과 출력 코드
-        # # Program에 출력
-        temp_time_h = (self.termination[1] - time() + self.start_time) / (60.0 * 60)
-        temp_time_m = (self.termination[1] - time() + self.start_time) % (60.0 * 60) / 60.0
-        temp_time_s = (self.termination[1] - time() + self.start_time) % 60.0
-        if self.termination[0][:4].lower() == 'time':
-            if self.agent.name == 'rl':
-                txt = "simulation iter %d ends. %dh:%dm:%.0fs left. num_f_survived: %d, cum_rewards: %.2f"\
-                      % (self.iter, temp_time_h, temp_time_m, temp_time_s, self.env.num_f_survived, self.agent.cumulative_rewards)
-            else:
-                txt = "simulation iter %d ends. %dh:%dm:%.0fs left. num_f_survived: %d" \
-                      % (self.iter, temp_time_h, temp_time_m, temp_time_s, self.env.num_f_survived)
-        elif self.termination[0][:4].lower() == 'iter':
-            if self.agent.name == 'rl':
-                txt = "simulation iter %d of %d ends. num_f_survived: %d, cum_rewards: %.2f"\
-                      % (self.iter, self.termination[1] - 1, self.env.num_f_survived, self.agent.cumulative_rewards)
-            else:
-                txt = "simulation iter %d of %d ends. num_f_survived: %d" % (self.iter, self.termination[1] - 1, self.env.num_f_survived)
-        print(txt)
-        if self.gui_framework:
-            self.gui_framework.write_console(txt)
         # # 파일로 저장
         filename = "results"
         extension = ".csv"
@@ -142,11 +123,34 @@ class MainApp(object):
         # # lm 데이터를 파일로 저장
         if self.agent.name == 'rl':
             filename = "LinearModel_data"
+            data_features_qhat, rsquared = self.agent.update_weight(print_memory=True)
             if not os.path.isfile(self.log_dir + filename + extension):
                 headstr = ', '.join('feature%d' % i for i in range(self.agent.num_features)) + ', Y(=Q)'
             else:
                 headstr = False
-            write_data(self.log_dir, data=self.agent.memory_for_record, filename=filename, head=headstr, list_type='2D')
+            write_data(self.log_dir, data=data_features_qhat, filename=filename, head=headstr, list_type='2D')
+        # # Program에 출력
+        temp_time_h = (self.termination[1] - time() + self.start_time) / (60.0 * 60)
+        temp_time_m = (self.termination[1] - time() + self.start_time) % (60.0 * 60) / 60.0
+        temp_time_s = (self.termination[1] - time() + self.start_time) % 60.0
+        if self.termination[0][:4].lower() == 'time':
+            if self.agent.name == 'rl':
+                txt = "simulation iter %d ends. %dh:%dm:%.0fs left. num_f_survived: %d, cum_rewards: %.2f, Rsquared: %.2f, sec/iter: %.1f" \
+                      % (self.iter, temp_time_h, temp_time_m, temp_time_s, self.env.num_f_survived, self.agent.cumulative_rewards, rsquared, time()-self.iter_start_time)
+            else:
+                txt = "simulation iter %d ends. %dh:%dm:%.0fs left. num_f_survived: %d, sec/iter: %.1f" \
+                      % (self.iter, temp_time_h, temp_time_m, temp_time_s, self.env.num_f_survived, time()-self.iter_start_time)
+        elif self.termination[0][:4].lower() == 'iter':
+            if self.agent.name == 'rl':
+                txt = "simulation iter %d of %d ends. num_f_survived: %d, cum_rewards: %.2f, Rsquared: %.2f, sec/iter: %.1f" \
+                      % (self.iter, self.termination[1] - 1, self.env.num_f_survived, self.agent.cumulative_rewards, rsquared, time()-self.iter_start_time)
+            else:
+                txt = "simulation iter %d of %d ends. num_f_survived: %d, sec/iter: %.1f" \
+                      % (self.iter, self.termination[1] - 1, self.env.num_f_survived, time()-self.iter_start_time)
+        print(txt)
+        if self.gui_framework:
+            self.gui_framework.write_console(txt)
+        self.iter_start_time = time()
 
     def stop_signal(self):
         # # 정지 signal 확인
