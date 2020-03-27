@@ -12,11 +12,22 @@ from util import calc_theta
 
 
 class GraphicDisplay(tk.Tk):
-    def __init__(self, canvas_width, canvas_height, unit_pixel=4):
+    def __init__(self, canvas_width, canvas_height, unit_pixel=1, autosave_iter=2, load_file=(False, "")):
         super(GraphicDisplay, self).__init__()
         self.title('WTA Simulation')
-        self.width = int(canvas_width)  # 캔버스 가로 크기
-        self.height = int(canvas_height) + 15  # 캔버스 세로 크기
+        if load_file[0]:  # True or False
+            print("loading animation file...")
+            self.loaded_data = self.load_file(load_file[1])  # load_file[1]: log folder name
+            print("animation file loaded.")
+            self.data = self.loaded_data['data']
+            self.width = self.loaded_data['width']
+            self.height = self.loaded_data['height']
+            self.autosave_iter = self.loaded_data['autosave_iter']
+        else:
+            self.width = int(canvas_width)  # 캔버스 가로 크기
+            self.height = int(canvas_height) + 15  # 캔버스 세로 크기
+            self.autosave_iter = autosave_iter
+            self.data = defaultdict(dict)
         self.unit = unit_pixel  # 단위픽셀 수
         self.geometry('{0}x{1}'.format(self.width * self.unit + 50, self.height * self.unit + 50))
 
@@ -32,8 +43,6 @@ class GraphicDisplay(tk.Tk):
         self.sim_speed = 1/100000.0  # sec:sim_t
         self.event_cnt = 0
         self.is_moving = 0  # pause 기능을 위한 변수.
-
-        self.data = defaultdict(dict)
 
     def _build_canvas(self):
         canvas = tk.Canvas(self, bg='white',
@@ -92,7 +101,7 @@ class GraphicDisplay(tk.Tk):
         self.time_text = self.canvas.create_text(10, 10, fill="black", text=time_str, font=font, anchor=anchor)
 
     def printing_iter(self, font='Helvetica', size=12, style='bold', anchor="ne"):
-        iter_str = "iteration: %d / %d (Total %d)" % (self.iter, len(self.data.keys()) - 1, len(self.data.keys()))
+        iter_str = "iteration: %d / %d" % (self.iter, max(self.data.keys()))
         font = (font, str(size), style)
         if hasattr(self, 'iter_text'):
             self.canvas.delete(self.iter_text)
@@ -152,6 +161,9 @@ class GraphicDisplay(tk.Tk):
                                 'text': self.canvas.create_text(x, y, text=str(a_id))}
 
     def run_entire(self):
+        if self.iter not in self.data.keys():
+            tk.messagebox.showwarning("Error", "Data not found.")
+            return
         self.run_reset()
         self.is_moving = 1
         while self.event_cnt <= len(self.data[self.iter]) - 2:
@@ -196,20 +208,24 @@ class GraphicDisplay(tk.Tk):
         self.is_moving = 0
 
     def iter_plus(self):
-        pass
-        if -1 <= self.iter < len(self.data.keys()) - 1:
-            self.iter += 1
+        if self.iter + self.autosave_iter in self.data.keys():
+            self.iter += self.autosave_iter
             self.run_reset()
         else:
-            tk.messagebox.showwarning("Error", "iteration ends")
+            if self.iter + self.autosave_iter > max(self.data.keys()):
+                tk.messagebox.showwarning("Error", "iteration ends")
+            else:
+                tk.messagebox.showwarning("Error", "Data not found.")
 
     def iter_minus(self):
-        pass
-        if 1 <= self.iter < len(self.data.keys()) + 1:
-            self.iter -= 1
+        if self.iter - self.autosave_iter in self.data.keys():
+            self.iter -= self.autosave_iter
             self.run_reset()
         else:
-            tk.messagebox.showwarning("Error", "you're at the first iteration")
+            if self.iter - self.autosave_iter < 0:
+                tk.messagebox.showwarning("Error", "you're at the first iteration")
+            else:
+                tk.messagebox.showwarning("Error", "Data not found.")
 
     def change_iter(self):
         win_entry = tk.Toplevel(self)
@@ -217,10 +233,13 @@ class GraphicDisplay(tk.Tk):
         win_entry.geometry('300x130+550+450')
 
         def check_ok(event=None):  # 숫자 입력 후 ok를 눌렀을 때: 메세지 보여주고/입력한 숫자 반영하고/창 끄기
-            tk.messagebox.showinfo("info", "iteration changes to %s" % input_num.get())
-            # self.sim_speed = int(input_num.get()) / 10000.0
-            self.iter = int(input_num.get())
-            self.printing_iter()
+            if int(input_num.get()) not in self.data.keys():
+                tk.messagebox.showwarning("Error", "Data not found.")
+            else:
+                tk.messagebox.showinfo("info", "iteration changes to %s" % input_num.get())
+                # self.sim_speed = int(input_num.get()) / 10000.0
+                self.iter = int(input_num.get())
+                self.printing_iter()
             win_entry.destroy()
         input_num = tk.StringVar()
 
@@ -234,27 +253,34 @@ class GraphicDisplay(tk.Tk):
         win_entry.bind("<Return>", check_ok)
         win_entry.mainloop()
 
-    def save_file(self, log_dir):
+    def save_file(self, num_iter, log_dir):
         save_dir = log_dir + "gui_pkl/"
         if not os.path.exists(save_dir):  # 폴더 없으면 만들기
             os.makedirs(save_dir)
         # for old_file in os.scandir(save_dir):  # 파일 삭제하기.
         #     os.remove(old_file)
         with open(save_dir + 'simGUIdata.pkl', 'wb') as file:  # xx.pkl 파일을 바이너리 쓰기 모드(wb)로 열기
-            data = {'data': self.data, 'width': self.width, 'height': self.height, 'unit': self.unit}
+            _tempdata = {iter: self.data[iter] for iter in range(0, num_iter + 1, self.autosave_iter)}
+            data = {'data': _tempdata, 'width': self.width, 'height': self.height, 'autosave_iter': self.autosave_iter}
             pickle.dump(data, file)
 
-    def save_stepdata(self, mainapp, env):
+    def save_stepdata(self, num_iter, env):
         if self.event_cnt == 0:
-            self.data[mainapp.iter][self.event_cnt] = \
+            self.data[num_iter][self.event_cnt] = \
                 (env.sim_t, deepcopy(env.flight), deepcopy(env.missile), deepcopy(env.asset), deepcopy(env.battery))
             self.event_cnt += 1
         else:
             if env.sim_t % 10 == 0 or self.lenf != len(env.flight) or self.lenm - len(env.missile) != 0:
-                self.data[mainapp.iter][self.event_cnt] = (env.sim_t, deepcopy(env.flight), deepcopy(env.missile), deepcopy(env.asset))
+                self.data[num_iter][self.event_cnt] = (env.sim_t, deepcopy(env.flight), deepcopy(env.missile), deepcopy(env.asset))
                 self.event_cnt += 1
         self.lenf = len(env.flight)
         self.lenm = len(env.missile)
+
+    @staticmethod
+    def load_file(logname):
+        with open('./logs/%s/gui_pkl/simGUIdata.pkl' % logname, 'rb') as file:  # james.p 파일을 바이너리 읽기 모드(rb)로 열기
+            print("find file!")
+            return pickle.load(file)
 
 
 if __name__ == '__main__':

@@ -28,7 +28,7 @@ class Flight(object):
 
         # 방향전환 가중치 (전투기 행동특성)
         self.w_m = 3 + random()  # 관성 가중치 (현재 진행방향 유지하는 것에 대한 가중치). range: [2, 3]
-        self.w_a = 3 + random()  # 자산 방향 가중치. 가까울수로 크게. range: (0, inf). 난수 0일 때 거리100일때 0, 거리45일때 1
+        self.w_a = 7 + random()  # 자산 방향 가중치. 가까울수로 크게. range: (0, inf). 난수 0일 때 거리100일때 0, 거리45일때 1
         self.w_b1 = - 0.8 - random()  # 가장 가까운 포대 중심 피하는 경로 가중치. 음수값이어야 하며, 작을수록(절대값이 클수록) 더 열심히 피함. range: [-0.7,-1.7]
         self.w_b2 = random()  # - 2 - self.w_b1  # 두 번째로 가까운 포대 중심 피하는 경로 가중치. w_b1 + w_b2 = -2. range[-0.3, -1.3]
 
@@ -134,11 +134,6 @@ class Battery(object):
 
     def init_reload(self):
         self.reload = 3  # 한 번 쏘고 나면 3초 뒤에 다시 쏠 수 있음.
-
-    def initialize(self):
-        self.radar_capa = 2
-        self.reload = 0
-        self.total_launching = 0
 
 
 class Missile(object):

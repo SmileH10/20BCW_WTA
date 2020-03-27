@@ -34,7 +34,7 @@ def calc_bf_kill_prob(battery, flight):
 
 def calc_kill_prob_dist(dist):
     # 거리에 따른 파괴 확률. 작성해야 함. 일단 대충 해놓음. 엑셀에서 불러오게 해야 할까? 겠지?
-    return 1 - dist / 40.0
+    return max(0, 0.95 - dist / 100.0)
 
 
 def calc_kill_prob_angle(theta):
@@ -43,8 +43,8 @@ def calc_kill_prob_angle(theta):
     :return: 각도에 따른 파괴 확률
     조건 3개 만족해야 함: (1) alpha & beta >= 0; (2) -1 * alpha + beta >= 0; (3) alpha + beta <=1
     """
-    alpha = 0.5
-    beta = 0.5
+    alpha = 0.2
+    beta = 0.75
     return -1 * alpha * math.cos(theta) + beta
 
 
@@ -74,7 +74,21 @@ def calc_theta(v1, v2):
     :param v2: 2D vector list (to)
     :return: angle from v1 to v2. 범위: [-pi, pi]
     """
-    theta = math.acos((v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2)))  # v1->v2 벡터 각도 (0 ~ pi)
+    if (v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2)) >= 1:
+        print('[util.py][calc_theta] check_error: ', v1, v2, (v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2)), enorm(v1), enorm(v2))
+        theta = 0
+    elif (v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2)) <= -1:
+        print('[util.py][calc_theta] check_error: ', v1, v2, (v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2)), enorm(v1), enorm(v2))
+        theta = math.pi
+    else:
+        theta = math.acos((v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2)))  # v1->v2 벡터 각도 (0 ~ pi)
     if (v1[0] * v2[1] - v2[0] * v1[1]) < 0:  # math.sin(theta_sin) = (v1[0] * v2[0] + v1[1] * v2[1]) / (enorm(v1) * enorm(v2))
         theta = - theta
     return theta
+
+
+def calc_mean(listarg):
+    if type(listarg) != list:
+        return -1
+    else:
+        return sum(x for x in listarg) / float(len(listarg))

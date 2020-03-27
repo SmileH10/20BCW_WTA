@@ -1,24 +1,6 @@
 from entity import *
+from rl_cores import State
 import random
-from copy import deepcopy
-
-
-class FakeEnv(object):
-    def __init__(self, env):
-        self.flight = deepcopy(env.flight)
-        self.battery = deepcopy(env.battery)
-        self.missile = deepcopy(env.missile)
-
-    def transit_afteraction_state(self, actions):
-        # action (어떤 포대가 어느 전투기로 "미사일"을 발사했다) 을 반영. 시간 경과 없음
-        for a in actions:
-            if a != 'DoNothing':
-                action_bid = a[0]
-                action_fid = a[1]
-                new_missile = Missile(launching_battery=self.battery[action_bid], target_flight=self.flight[action_fid])  # 미사일 생성
-                self.missile[new_missile.id] = new_missile  # 미사일 딕셔너리에 추가
-                self.battery[action_bid].init_reload()  # 포대 재장전시간 초기화
-                self.flight[action_fid].surv_prob = self.flight[action_fid].multiply([(1 - m.kill_prob) for m in self.missile.values() if m.flight.id == a[1]])  # 변경된 전투기 생존확률 반영
 
 
 class Env(object):
@@ -43,36 +25,33 @@ class Env(object):
         self.animation_autosave = True
         self.num_f_survived = 0
 
-    def init_env(self):
-        # battery 생성
-        self.battery = {}
-        temp_x = self.map_width / 2 / self.b_num
-        for b in range(self.b_num):
-            # 일단 위치는 균등하게 퍼트려놓음.
-            self.battery[b] = Battery(b_id=b, x=temp_x, y=100)
-            temp_x += self.map_width / self.b_num
-
-    def init_env_iter(self, task, iter):
+    def init_env(self, task, num_iter):
         """
         매 iteration 마다 sim_t 초기화 / battery 초기화 / asset 새로 생성 / flight 새로 생성
         """
         self.sim_t = 0
         self.num_f_survived = 0
         if task.lower() == 'test':
-            random.seed(iter + 910814)
+            random.seed(num_iter + 910814)
         # elif self.task.lower() == 'train':  # 로딩한 agent 이어서 학습할 때 예전 꺼 그대로 반복하지 않도록...
-        #     random.seed(self.iter)
+        #     random.seed(num_iter)
 
         """
         flight 출발좌표: (x, map_height - 10)
         battery 위치좌표: (x, 사거리 * 2.5)
         asset 위치좌표: (x, 5)
         """
-        del self.flight, self.asset
+        del self.battery, self.flight, self.asset
+        self.battery = {}
         self.asset = {}
         self.flight = {}
+
+        # battery 생성
+        temp_x = self.map_width / 2 / self.b_num
         for b in range(self.b_num):
-            self.battery[b].initialize()
+            # 일단 위치는 균등하게 퍼트려놓음.
+            self.battery[b] = Battery(b_id=b, x=temp_x, y=100)
+            temp_x += self.map_width / self.b_num
 
         # asset 생성
         asset_num = self.f_num
@@ -89,8 +68,15 @@ class Env(object):
             self.flight[f] = Flight(f_id=f, init_x=temp_x[f] * self.map_width, init_y=self.map_height - 10, target_asset=self.asset[f],
                                     start_t=random.randint(0, self.f_interval))
 
+    def step(self, actions):
+        reward = self.transit_afteraction_state(actions)
+        self.transit_next_state()
+        next_state = State(self)
+        return next_state, reward
+
     def transit_afteraction_state(self, actions):
         # action (어떤 포대가 어느 전투기로 "미사일"을 발사했다) 을 반영. 시간 경과 없음
+        f_surv_prob_before = sum([f.surv_prob for f in self.flight.values()])
         for a in actions:
             if a != 'DoNothing':
                 action_bid = a[0]
@@ -99,6 +85,8 @@ class Env(object):
                 self.missile[new_missile.id] = new_missile  # 미사일 딕셔너리에 추가
                 self.battery[action_bid].init_reload()  # 포대 재장전시간 초기화
                 self.flight[action_fid].surv_prob = self.flight[action_fid].multiply([(1 - m.kill_prob) for m in self.missile.values() if m.flight.id == a[1]])  # 변경된 전투기 생존확률 반영
+        reward = f_surv_prob_before - sum([f.surv_prob for f in self.flight.values()])
+        return reward
 
     def transit_next_state(self):
         # 시뮬레이션 시간을 1 증가시키기
