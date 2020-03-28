@@ -11,7 +11,7 @@ import os, sys
 
 
 class MainApp(object):
-    def __init__(self, agent_name='greedy', task='Train', map_width=200.0, map_height=300.0, battery_num=3, flight_num=20, flight_time_interval=50,
+    def __init__(self, agent_name='rl', task='Train', map_width=200.0, map_height=300.0, battery_num=3, flight_num=20, flight_time_interval=50,
                  termination=('Iteration number', 5), autosave_iter=2, use_animation=True):
         self.gui_framework = None
         self.env = None
@@ -56,7 +56,7 @@ class MainApp(object):
             self.gui_framework.write_console("log directory: " + self.log_dir)
         # 애니메이션 만들기
         if self.use_animation:
-            self.animation = GraphicDisplay(self.map_height, self.map_width,
+            self.animation = GraphicDisplay(cvs_width=self.map_height, cvs_height=self.map_width, autosave_iter=self.autosave_iter,
                                             unit_pixel=min(int(1230.0 / self.map_height), int(910.0 / self.map_width)) - 1)
         # 기타 설정 초기화하기
         self.iter = 0
@@ -185,7 +185,6 @@ if __name__ == '__main__':
     my_main.run_main()
 
     # # Load animation
-    # ani = GraphicDisplay(my_main.map_height, my_main.map_width,
-    #                      unit_pixel=3,
-    #                      load_file=(True, 'rl-03-27_13-58-52'))
+    # ani = GraphicDisplay(unit_pixel=3,
+    #                      load_file='rl-03-27_13-58-52')
     # ani.mainloop()

@@ -12,23 +12,34 @@ from util import calc_theta
 
 
 class GraphicDisplay(tk.Tk):
-    def __init__(self, canvas_width, canvas_height, unit_pixel=1, autosave_iter=2, load_file=(False, "")):
+    def __init__(self, unit_pixel=1, **kwargs):
         super(GraphicDisplay, self).__init__()
         self.title('WTA Simulation')
-        if load_file[0]:  # True or False
+        if "load_file" in kwargs:
+            logfolder = kwargs.get("load_file")
             print("loading animation file...")
-            self.loaded_data = self.load_file(load_file[1])  # load_file[1]: log folder name
+            self.loaded_data = self.load_file(logfolder)
             print("animation file loaded.")
             self.data = self.loaded_data['data']
             self.width = self.loaded_data['width']
             self.height = self.loaded_data['height']
             self.autosave_iter = self.loaded_data['autosave_iter']
         else:
-            self.width = int(canvas_width)  # 캔버스 가로 크기
-            self.height = int(canvas_height) + 15  # 캔버스 세로 크기
-            self.autosave_iter = autosave_iter
             self.data = defaultdict(dict)
+            if 'autosave_iter' in kwargs:
+                self.autosave_iter = kwargs.get('autosave_iter', 100)
+            else:
+                raise Exception("Not Exist Autosave_iter. (autosave_iter=?)")
+            if 'cvs_width' in kwargs:
+                self.width = int(kwargs.get('cvs_width'))  # 캔버스 가로 크기
+            else:
+                raise Exception("Not Exist Canvas width. (cvs_width=?)")
+            if 'cvs_height' in kwargs:
+                self.height = int(kwargs.get('cvs_height')) + 15  # 캔버스 세로 크기
+            else:
+                raise Exception("Not Exist Canvas height. (cvs_height=?)")
         self.unit = unit_pixel  # 단위픽셀 수
+
         self.geometry('{0}x{1}'.format(self.width * self.unit + 50, self.height * self.unit + 50))
 
         self.f_imgfile, self.b_imgfile, self.m_imgfile, self.a_imgfile = {}, {}, {}, {}  # 각 객체가 image file 보유

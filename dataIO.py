@@ -12,7 +12,7 @@ def write_data(log_dir, data, filename, head=False, extension=".csv", mode='a+',
     elif type(data) == str:
         f.write("%s\n" % data)
     else:
-        print("Can't write data")
+        raise Exception("[dataIO.py]write_data: Unknown type {}: {}".format(type(data), data))
     f.close()
 
 
