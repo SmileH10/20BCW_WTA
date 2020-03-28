@@ -174,34 +174,37 @@ class RL(object):
         """
         self.num_visit['[get_features]'] += 1
         start_t = time()
-        features = np.array([-1. for _ in range(self.num_features)])
+        features = [-1. for _ in range(self.num_features)]
         # features[0] = sum(f.surv_prob for f in env.flight.values())  # 예시) 모든 비행기 생존확률의 합
         # 여기서부터 찬우형이 한 거 수정본.
+        fs = state.flight.values()
+        bs = state.battery.values()
+        ms = state.missile.values()
+        fb_dist = {(f, b): calc_object_dist(f, b) for f in fs for b in bs}
         b_business = {}
-        for b in state.battery.values():
-            b_business[b.id] = sum(f.surv_prob / calc_object_dist(f, b) for f in state.flight.values()
-                                   if b == np.argmin(calc_object_dist(f, b) for b in state.battery.values()))
-        features[0] = sum((b_business[b.id] + 1) ** 2 for b in state.battery.values())
-        # self.time_check['[get_featue] f0'] += time() - start_t
-        # start_t1 = time()
+        for b in bs:
+            b_business[b.id] = sum(f.surv_prob / fb_dist[(f, b)] for f in fs
+                                   if fb_dist[(f, b)] == min(fb_dist[(f, b2)] for b2 in bs))
+        features[0] = sum((b_business[b.id] + 1) ** 2 for b in bs)
+        self.time_check['[get_featue] f0'] += time() - start_t
+        start_t1 = time()
         b_urgency = {}
-        for b in state.battery.values():
-            b_urgency[b.id] = sum(f.surv_prob / calc_object_dist(f, b) for f in state.flight.values()
-                                  if b == np.argmin(calc_object_dist(f, b2) for b2 in state.battery.values())
-                                  and calc_object_dist(f, b) <= b.radius)
-        features[1] = sum(max(b_urgency[b.id], 0) for b in state.battery.values())
-        # self.time_check['[get_featue] f1'] += time() - start_t1
-        # start_t2 = time()
+        for b in bs:
+            b_urgency[b.id] = sum(f.surv_prob / fb_dist[(f, b)] for f in fs
+                                  if fb_dist[(f, b)] == min(fb_dist[(f, b2)] for b2 in bs)
+                                  and fb_dist[(f, b)] <= b.radius)
+        features[1] = sum(max(b_urgency[b.id], 0) for b in bs)
+
+        self.time_check['[get_featue] f1'] += time() - start_t1
+        start_t2 = time()
 
         b_future_business = {}
-        before = sum(calc_bf_kill_prob(b, f) for f in state.flight.values() for b in state.battery.values())
+        before = sum(calc_bf_kill_prob(b, f) for f in fs for b in bs)
 
-        param_future = 2
-        for f in state.flight.values():
+        param_future = 1
+        for f in fs:
             for moving_number in range(param_future):
-                if state.sim_t < f.start_t:  # 전투기 출발시간이 아직 안됐으면
-                    pass  # 움직이지 않음
-                else:  # 출발시간이 지났으면 움직임 반영하기.
+                if state.sim_t >= f.start_t:  # 출발시간이 지났으면 움직임 반영하기.
                     f.x += f.v_x
                     f.y += f.v_y
                     if f.x >= state.map_width:
@@ -212,26 +215,26 @@ class RL(object):
                         f.x = 0
                         f.v_x = 0
                         f.v_y = -0.272
-        for b in state.battery.values():
-            b_future_business[b.id] = sum(f.surv_prob / calc_object_dist(f, b) for f in state.flight.values()
-                                          if b == np.argmin(calc_object_dist(f, b) for b in state.battery.values()))
-        features[2] = sum((b_future_business[b.id] + 1) ** 2 for b in state.battery.values())
-        # self.time_check['[get_featue] f2'] += time() - start_t2
-        # start_t3 = time()
+        for b in bs:
+            b_future_business[b.id] = sum(f.surv_prob / fb_dist[(f, b)] for f in fs
+                                          if fb_dist[(f, b)] == min(fb_dist[(f, b2)] for b2 in bs))
+        features[2] = sum((b_future_business[b.id] + 1) ** 2 for b in bs)
+        self.time_check['[get_featue] f2'] += time() - start_t2
+        start_t3 = time()
 
-        after = sum(calc_bf_kill_prob(b, f) for f in state.flight.values() for b in state.battery.values())
+        after = sum(calc_bf_kill_prob(b, f) for f in fs for b in bs)
         features[3] = after - before
-        # self.time_check['[get_featue] f3'] += time() - start_t3
-        # start_t4 = time()
+        self.time_check['[get_featue] f3'] += time() - start_t3
+        start_t4 = time()
 
         remain_time = {}
-        for b in state.battery.values():
+        for b in bs:
             if b.radar_capa > 0:
                 remain_time[b.id] = b.reload
             else:
-                remain_time[b.id] = min(m.expc_arrt for m in state.missile.values() if m.battery.id == b.id)
-        features[4] = sum(remain_time[b.id] for b in state.battery.values())
-       #  self.time_check['[get_featue] f4'] += time() - start_t4
+                remain_time[b.id] = min(m.expc_arrt for m in ms if m.battery.id == b.id)
+        features[4] = sum(remain_time[b.id] for b in bs)
+        self.time_check['[get_featue] f4'] += time() - start_t4
         self.time_check['[get_featue] total'] += time() - start_t
 
         assert self.num_features == len(features)

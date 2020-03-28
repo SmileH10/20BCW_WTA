@@ -33,8 +33,8 @@ class Env(object):
         self.num_f_survived = 0
         if task.lower() == 'test':
             random.seed(num_iter + 910814)
-        # elif self.task.lower() == 'train':  # 로딩한 agent 이어서 학습할 때 예전 꺼 그대로 반복하지 않도록...
-        #     random.seed(num_iter)
+        elif task.lower() == 'train':  # 로딩한 agent 이어서 학습할 때 예전 꺼 그대로 반복하지 않도록...
+            random.seed(num_iter)
 
         """
         flight 출발좌표: (x, map_height - 10)
