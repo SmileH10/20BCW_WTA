@@ -27,10 +27,10 @@ class Greedy(object):
         best_surv_probs = float("inf")
         if len(actionset) == use_delay:
             action_done = False
-            action_taken = ("DoNothing", "DoNothing", "DoNothing")
+            action_taken = ["DoNothing"]
         else:
             action_done = True
-            action_taken = ("DoNothing", "DoNothing", "DoNothing")
+            action_taken = ["DoNothing"]
             for actions in actionset:  # e.g.) actions: [(b1, f1), (b2, f3), (b3, f1)]
                 # 전투기를 향해 날아가고 있는 미사일이 있다면, 그 전투기에게 또 쏘지 않음.
                 valid_action = True
@@ -80,10 +80,9 @@ class RL(object):
         self.num_visit['[get_action]'] += 1
         # 가능한 모든 actions 불러오기
         actionset = get_actionset(state, use_delay=use_delay)
-        # 가능한 행동이 1개일 때 [("DoNothing", "DoNothing", "DoNothing")]
+        # 가능한 행동이 1개일 때 [("DoNothing", "DoNothing", ..., "DoNothing")]
         if len(actionset) == use_delay:
-            # action_taken = actionset[0]
-            action_taken = ("DoNothing", "DoNothing", "DoNothing")
+            action_taken = ["DoNothing"]
             action_done = False
             feature = None
         # 가능한 행동이 여러 개일 때

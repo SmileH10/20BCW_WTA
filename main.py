@@ -159,6 +159,7 @@ class MainApp(object):
             print("\n[num_visit]")
             for key in self.agent.num_visit.keys():
                 print(key, ": ", self.agent.num_visit[key])
+            print("\n\n")
 
         if self.gui_framework:
             self.gui_framework.write_console(txt)
